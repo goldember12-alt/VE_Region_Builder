@@ -1,0 +1,9 @@
+paths:
+  template_model_dir: C:/Users/Jameson.Clements/source/VE_Models/models/SayedMM
+  updated_csv_dir: C:/Users/Jameson.Clements/source/VE_Models/models/updatedcsvs
+  filelist_path: data_sources/filelist.txt
+  manual_mapping_path: metadata/statewide_manual_file_mappings.csv
+  output_model_dir: outputs/generated_models/statewide_va_clean
+  report_path: outputs/reports/statewide_assembly_report.csv
+
+overwrite_output: true

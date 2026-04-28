@@ -1,0 +1,57 @@
+order,expected_file,expected_relative_path,matched_updated_file,match_type,status,notes
+1,azone_carsvc_characteristics.csv,inputs/azone_carsvc_characteristics.csv,01_azone_carsvc_characteristic.csv,manual_mapping,injected,Approved manual mapping: Singular/plural filename drift
+2,azone_charging_availability.csv,inputs/azone_charging_availability.csv,02_azone_charging_availability.csv,exact,injected,
+3,azone_electricity_carbon_intensity.csv,inputs/azone_electricity_carbon_intensity.csv,03_azone_electricity_carbon_intensity.csv,exact,injected,
+4,azone_fuel_power_cost.csv,inputs/azone_fuel_power_cost.csv,04_azone_fuel_power_cost.csv,exact,injected,
+5,azone_gq_pop_by_age.csv,inputs/azone_gq_pop_by_age.csv,05_azone_gq_pop_by_age.csv,exact,injected,
+6,azone_hh_av_veh_per_driver.csv,inputs/azone_hh_av_veh_per_driver.csv,06_azone_hh_av_veh_per_driver.csv,exact,injected,
+7,azone_hh_lttrk_prop.csv,inputs/azone_hh_lttrk_prop.csv,07_azone_hh_Ittrk_prop.csv,manual_mapping,injected,Approved manual mapping: Likely lowercase-l/uppercase-I filename drift
+8,azone_hh_pop_by_age.csv,inputs/azone_hh_pop_by_age.csv,08_azone_hh_pop_by_age_year.csv,manual_mapping,injected,Approved manual mapping: Updated filename includes year suffix
+9,azone_hh_veh_mean_age.csv,inputs/azone_hh_veh_mean_age.csv,09_azone_hh_veh_mean_age.csv,exact,injected,
+10,marea_census_r.csv,inputs/marea_census_r.csv,10_marea_census_r.csv,exact,injected,
+11,azone_hh_veh_own_taxes.csv,inputs/azone_hh_veh_own_taxes.csv,11_azone_hh_veh_own_taxes.csv,exact,injected,
+12,azone_hhsize_targets.csv,inputs/azone_hhsize_targets.csv,12_azone_hhsize_targets.csv,exact,injected,
+13,azone_lttrk_prop.csv,inputs/azone_lttrk_prop.csv,13_azone_Ittrk_prop.csv,manual_mapping,injected,Approved manual mapping: Likely lowercase-l/uppercase-I filename drift
+14,azone_payd_insurance_prop.csv,inputs/azone_payd_insurance_prop.csv,,template_existing,template_existing,No updated CSV match found; copied template file is retained.
+15,azone_per_cap_inc.csv,inputs/azone_per_cap_inc.csv,15_azone_per_cap_inc.csv,exact,injected,
+16,azone_prop_sov_dvmt_diverted.csv,inputs/azone_prop_sov_dvmt_diverted.csv,16_azone_prop_sov_dvmt_diverted(in).csv,manual_mapping,injected,Approved manual mapping: Updated filename includes parenthetical suffix
+17,azone_relative_employment.csv,inputs/azone_relative_employment.csv,17_azone_relative_employment.csv,exact,injected,
+18,azone_veh_use_taxes.csv,inputs/azone_veh_use_taxes.csv,18_azone_veh_use_taxes.csv,exact,injected,
+19,azone_vehicle_access_times.csv,inputs/azone_vehicle_access_times.csv,19_azone_veh_access_times_year.csv,manual_mapping,injected,Approved manual mapping: Vehicle abbreviated as veh and includes year suffix
+20,bzone_carsvc_availability.csv,inputs/bzone_carsvc_availability.csv,20_bzone_carsvc_availability.csv,exact,injected,
+21,bzone_dwelling_units.csv,inputs/bzone_dwelling_units.csv,21_bzone_dwelling_units.csv,exact,injected,
+22,bzone_employment.csv,inputs/bzone_employment.csv,22_bzone_employment.csv,exact,injected,
+23,bzone_hh_inc_qrtl_prop.csv,inputs/bzone_hh_inc_qrtl_prop.csv,23_bzone_hh_inc_qrtl_prop.csv,exact,injected,
+24,bzone_lat_lon.csv,inputs/bzone_lat_lon.csv,24_bzone_lat_lon.csv,exact,injected,
+25,bzone_network_design.csv,inputs/bzone_network_design.csv,25_bzone_network_design.csv,exact,injected,
+26,bzone_parking.csv,inputs/bzone_parking.csv,26_bzone_parking.csv,exact,injected,
+27,bzone_transit_service.csv,inputs/bzone_transit_service.csv,27_bzone_transit_service.csv,exact,injected,
+28,bzone_travel_demand_mgt.csv,inputs/bzone_travel_demand_mgt.csv,28_bzone_travel_demand_management.csv,manual_mapping,injected,Approved manual mapping: Mgt expanded to management
+29,bzone_unprotected_area.csv,inputs/bzone_unprotected_area.csv,29_bzone_unprotected_area.csv,exact,injected,
+30,bzone_urban-mixed-use_prop.csv,inputs/bzone_urban-mixed-use_prop.csv,30_bzone_urban-mixed-use_prop.csv,exact,injected,
+31,bzone_urban-town_du_proportions.csv,inputs/bzone_urban-town_du_proportions.csv,31_bzone_urban-town_du_proportions.csv,exact,injected,
+32,marea_base_year_dvmt.csv,inputs/marea_base_year_dvmt.csv,marearegion/marea_base_year_dvmt.csv,exact,injected,
+33,marea_congestion_charges.csv,inputs/marea_congestion_charges.csv,marearegion/marea_congestion_charges.csv,exact,injected,
+34,marea_dvmt_split_by_road_class.csv,inputs/marea_dvmt_split_by_road_class.csv,marearegion/marea_dvmt_split_by_road_class.csv,exact,injected,
+35,marea_lane_miles.csv,inputs/marea_lane_miles.csv,marearegion/marea_lane_miles.csv,exact,injected,
+36,marea_operations_deployment.csv,inputs/marea_operations_deployment.csv,marearegion/marea_operations_deployment.csv,exact,injected,
+37,marea_speed_smooth_ecodrive.csv,inputs/marea_speed_smooth_ecodrive.csv,marearegion/marea_speed_smooth_ecodrive.csv,exact,injected,
+38,marea_transit_biofuel_mix.csv,inputs/marea_transit_biofuel_mix.csv,marearegion/marea_transit_biofuel_mix.csv,exact,injected,
+39,marea_transit_fuel.csv,inputs/marea_transit_fuel.csv,marearegion/marea_transit_fuel.csv,exact,injected,
+40,marea_transit_powertrain_prop.csv,inputs/marea_transit_powertrain_prop.csv,marearegion/marea_transit_powertrain_prop.csv,exact,injected,
+41,marea_transit_service.csv,inputs/marea_transit_service.csv,marearegion/marea_transit_service.csv,exact,injected,
+42,model_parameters.json,inputs/model_parameters.json,,template_existing,template_existing,No updated CSV match found; copied template file is retained.
+43,other_ops_effectiveness.csv,inputs/other_ops_effectiveness.csv,marearegion/other_ops_effectiveness.csv,exact,injected,
+44,region_base_year_dvmt.csv,inputs/region_base_year_dvmt.csv,marearegion/region_base_year_dvmt.csv,exact,injected,
+45,region_carsvc_powertrain_prop.csv,inputs/region_carsvc_powertrain_prop.csv,marearegion/region_carsvc_powertrain_prop.csv,exact,injected,
+46,region_comsvc_lttrk_prop.csv,inputs/region_comsvc_lttrk_prop.csv,marearegion/region_comsvc_lttrk_prop.csv,exact,injected,
+47,region_comsvc_powertrain_prop.csv,inputs/region_comsvc_powertrain_prop.csv,marearegion/region_comsvc_powertrain_prop.csv,exact,injected,
+48,region_comsvc_veh_mean_age.csv,inputs/region_comsvc_veh_mean_age.csv,marearegion/region_comsvc_veh_mean_age.csv,exact,injected,
+49,region_hh_ave_driver_per_capita.csv,inputs/region_hh_ave_driver_per_capita.csv,marearegion/region_hh_ave_driver_per_capita.csv,exact,injected,
+50,region_hvytrk_powertrain_prop.csv,inputs/region_hvytrk_powertrain_prop.csv,marearegion/region_hvytrk_powertrain_prop.csv,exact,injected,
+51,region_prop_externalities_paid.csv,inputs/region_prop_externalities_paid.csv,marearegion/region_prop_externalities_paid.csv,exact,injected,
+52,region_road_cost.csv,inputs/region_road_cost.csv,marearegion/region_road_cost.csv,exact,injected,
+,,,geo.csv,unused_updated_csv,unused_updated_csv,Updated CSV was not injected into the generated model.
+,,,marearegion/marea_transit_ave_fuel_carbon_intensity.csv,unused_updated_csv,unused_updated_csv,Updated CSV was not injected into the generated model.
+,,,marearegion/region_ave_fuel_carbon_intensity.csv,unused_updated_csv,unused_updated_csv,Updated CSV was not injected into the generated model.
+,,,marearegion/region_co2e_costs.csv,unused_updated_csv,unused_updated_csv,Updated CSV was not injected into the generated model.

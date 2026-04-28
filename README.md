@@ -1,0 +1,156 @@
+# VE Region Builder
+
+This standalone helper project generates region-specific VisionEval model input folders from accurate statewide Virginia inputs.
+
+It does not modify VisionEval source code, statewide model inputs, or faulty regional model inputs. Generated files are written under this repository's `outputs/` folder.
+
+## Purpose
+
+The prototype builds a regional input folder by:
+
+1. Reading a YAML config that lists selected Mareas.
+2. Reading the statewide `defs/geography.csv`.
+3. Filtering geography rows to the selected Mareas.
+4. Deriving allowed Marea, Azone, Bzone, and Czone values from that filtered geography.
+5. Writing a generated `defs/geography.csv`.
+6. Applying `metadata/input_manifest.csv` to filter, copy, or skip input files.
+7. Writing a validation report.
+
+The statewide geography crosswalk is authoritative. The pipeline does not assume Marea, Azone, Bzone, or Czone names are interchangeable.
+
+## Folder Layout
+
+```text
+R/
+  assemble_statewide_model.R
+  build_geo_mask.R
+  subset_inputs.R
+  validate_outputs.R
+scripts/
+  assemble_statewide_model.R
+  build_region_model.R
+configs/
+  statewide_assembly.yml
+  example_region.yml
+metadata/
+  input_manifest.csv
+  input_manifest_notes.md
+outputs/
+  generated_models/
+  reports/
+  logs/
+tests/
+  fixtures/
+```
+
+## Config Format
+
+Statewide assembly config:
+
+```yaml
+paths:
+  template_model_dir: C:/Users/Jameson.Clements/source/VE_Models/models/SayedMM
+  updated_csv_dir: C:/Users/Jameson.Clements/source/VE_Models/models/updatedcsvs
+  filelist_path: data_sources/filelist.txt
+  manual_mapping_path: metadata/statewide_manual_file_mappings.csv
+  output_model_dir: outputs/generated_models/statewide_va_clean
+  report_path: outputs/reports/statewide_assembly_report.csv
+
+overwrite_output: true
+```
+
+The assembly output paths must resolve under this repository's `outputs/` folder. Existing assembly output is replaced when `overwrite_output: true`.
+
+Regional subsetting config:
+
+Example:
+
+```yaml
+region:
+  name: example_north
+  mareas:
+    - North
+  region_geo_values:
+    - Virginia
+
+paths:
+  source_model_dir: tests/fixtures/statewide_model
+  output_model_dir: outputs/generated_models/example_north
+  validation_report: outputs/reports/example_north_validation.csv
+  manifest: metadata/input_manifest.csv
+```
+
+`region.mareas` selects the planning region. `region.region_geo_values` is used only for manifest rows declared as `geo_level: Region`; lower geography levels are derived from `defs/geography.csv`.
+
+`paths.output_model_dir` and `paths.validation_report` must resolve under this repository's `outputs/` folder.
+
+## Manifest Format
+
+`metadata/input_manifest.csv` must contain:
+
+```text
+file,geo_level,action,notes
+```
+
+Allowed `geo_level` values are `Region`, `Marea`, `Azone`, `Bzone`, and `Czone`.
+
+Allowed `action` values are:
+
+- `filter_geo`: read the statewide CSV, require a `Geo` column, keep rows whose `Geo` is allowed for the declared `geo_level`, and write the generated CSV.
+- `copy`: copy the source file unchanged.
+- `review`: skip the file and record it in the validation report.
+
+The generated `defs/geography.csv` is created from the statewide geography crosswalk and should not be copied from the manifest.
+
+## Run
+
+Install the lightweight R dependencies if needed:
+
+```r
+install.packages(c("readr", "dplyr", "yaml", "fs", "tibble"))
+```
+
+Assemble the clean statewide source model first:
+
+```powershell
+Rscript scripts/assemble_statewide_model.R configs/statewide_assembly.yml
+```
+
+The assembly step copies the template model to `outputs/generated_models/statewide_va_clean`, matches expected inputs from `data_sources/filelist.txt` against corrected CSVs, injects only approved or unambiguous matches, and writes `outputs/reports/statewide_assembly_report.csv`. It does not perform regional filtering.
+
+Matching priority is:
+
+- Approved manual mappings in `metadata/statewide_manual_file_mappings.csv`.
+- Exact filename match.
+- Case-insensitive filename match.
+- Normalized filename match.
+
+Manual mappings are only used when `approved` is true. The mapped updated CSV must exist under `updated_csv_dir`; it is copied into the expected template location while preserving the expected filename in the generated model.
+
+If an expected file has no updated CSV match but already exists in the copied template model, assembly records `status = template_existing` and leaves the template file in place. This is expected for files such as non-CSV model parameters or inputs with no approved replacement.
+
+You can also override config values with `key=value` arguments, for example:
+
+```powershell
+Rscript scripts/assemble_statewide_model.R output_model_dir=outputs/generated_models/statewide_va_clean
+```
+
+Run the fixture example from the repository root:
+
+```powershell
+Rscript scripts/build_region_model.R configs/example_region.yml
+```
+
+Expected generated paths:
+
+```text
+outputs/generated_models/example_north/
+outputs/reports/example_north_validation.csv
+```
+
+## Current Scope
+
+This first version only subsets, copies, skips, and validates files listed in `metadata/input_manifest.csv`. It does not infer file geography automatically, transform units, recalculate totals, or repair data values.
+
+The statewide assembly stage is also conservative: it preserves the template model structure, treats `data_sources/filelist.txt` as the expected-file contract, and refuses to inject ambiguous filename matches.
+

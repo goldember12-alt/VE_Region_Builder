@@ -1,0 +1,5 @@
+file,geo_level,action,notes
+azone_values.csv,Azone,filter_geo,Example fixture Azone-level input.
+bzone_values.csv,Bzone,filter_geo,Example fixture Bzone-level input.
+model_parameters.csv,Region,copy,Example non-geographic file copied unchanged.
+needs_review.csv,Marea,review,Example file intentionally skipped for manual review.
