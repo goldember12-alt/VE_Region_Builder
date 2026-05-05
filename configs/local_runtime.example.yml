@@ -1,6 +1,5 @@
 ve_home: "C:/Path/To/Folder/Containing/VisionEval.R"
 ve_runtime: "outputs/generated_models"
 
-# Optional. R scripts cannot change the R executable after startup;
-# the PowerShell wrappers use this path to launch the matching Rscript.
+# Optional. PowerShell wrappers can use this path to launch the matching Rscript.
 rscript: "C:/Path/To/R-4.4.2/bin/Rscript.exe"

@@ -2,10 +2,10 @@ outputs/generated_models/**
 outputs/reports/**
 outputs/logs/**
 work/**
-docs/**
+docs/PACKAGING.md
 data_sources/paths.yml
 configs/*.yml
-
+AGENTS.md
 !outputs/generated_models/.gitkeep
 !outputs/reports/.gitkeep
 !outputs/logs/.gitkeep

@@ -1,6 +1,6 @@
 paths:
   template_model_dir: C:/path/to/template_model
-  updated_csv_dir: C:/path/to/statewide_csv_inputs
+  updated_csv_dir: C:/path/to/updatedcsvs
   filelist_path: data_sources/filelist.txt
   manual_mapping_path: metadata/statewide_manual_file_mappings.csv
   column_renames_path: metadata/statewide_column_renames.csv
@@ -12,7 +12,7 @@ paths:
 explicit_file_injections:
   - source: deflators.csv
     destination: defs/deflators.csv
-    notes: Injected updated deflators file into defs/deflators.csv.
+    notes: Inject updated deflators file into defs/deflators.csv.
 
 required_deflator_years:
   - 2024
