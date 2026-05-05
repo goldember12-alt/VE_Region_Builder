@@ -280,6 +280,127 @@ normalize_nbsp_csv <- function(path, label) {
   repaired
 }
 
+cap_vehicle_mean_age <- function(data, label, cap = 13.99) {
+  require_columns(data, c("Geo", "Year", "AutoMeanAge", "LtTrkMeanAge"), label)
+  capped <- data
+  count_values <- 0
+  changed_keys <- character(0)
+
+  for (column in c("AutoMeanAge", "LtTrkMeanAge")) {
+    values <- suppressWarnings(as.numeric(capped[[column]]))
+    invalid_numeric <- is.na(values) & nzchar(trimws(capped[[column]]))
+    if (any(invalid_numeric)) {
+      stop(label, " has nonnumeric ", column, " values.", call. = FALSE)
+    }
+
+    over_cap <- !is.na(values) & values >= 14
+    if (any(over_cap)) {
+      capped[[column]][over_cap] <- sprintf("%.2f", cap)
+      count_values <- count_values + sum(over_cap)
+      changed_keys <- union(changed_keys, paste(capped$Geo[over_cap], capped$Year[over_cap], sep = "/"))
+    }
+  }
+
+  add_summary(
+    label,
+    if (count_values > 0) "repaired" else "unchanged",
+    paste(
+      "VisionEval compatibility cap AutoMeanAge/LtTrkMeanAge >= 14 to 13.99;",
+      "changed rows:",
+      length(changed_keys),
+      "changed values:",
+      count_values
+    )
+  )
+  capped
+}
+
+assert_complete_group_or_all_na <- function(data, columns, label, group_label) {
+  require_columns(data, columns, label)
+  missing_count <- rowSums(is.na(data[, columns, drop = FALSE]) | data[, columns, drop = FALSE] == "")
+  partial <- missing_count > 0 & missing_count < length(columns)
+  if (any(partial)) {
+    stop(
+      label,
+      " has partial ",
+      group_label,
+      " rows and cannot be repaired automatically.",
+      call. = FALSE
+    )
+  }
+  invisible(missing_count == length(columns))
+}
+
+fill_zero_service_transit_defaults <- function(data, service, columns, defaults, service_columns, label, group_label) {
+  require_columns(data, c("Geo", "Year", columns), label)
+  require_columns(service, c("Geo", "Year", service_columns), "marea_transit_service.csv")
+
+  all_na_group <- assert_complete_group_or_all_na(data, columns, label, group_label)
+  service_key <- service[, c("Geo", "Year", service_columns)]
+  joined <- data %>%
+    mutate(.row_id = dplyr::row_number()) %>%
+    left_join(service_key, by = c("Geo", "Year"))
+
+  missing_service <- is.na(joined[[service_columns[[1]]]])
+  if (any(missing_service)) {
+    stop(label, " has Geo/Year rows missing from marea_transit_service.csv.", call. = FALSE)
+  }
+
+  service_total <- Reduce(
+    `+`,
+    lapply(service_columns, function(column) suppressWarnings(as.numeric(joined[[column]])))
+  )
+  if (any(is.na(service_total))) {
+    stop("marea_transit_service.csv has nonnumeric service values for ", group_label, ".", call. = FALSE)
+  }
+
+  needs_default <- all_na_group & service_total == 0
+  unsafe_missing <- all_na_group & service_total != 0
+
+  repaired <- data
+  for (column in names(defaults)) {
+    repaired[[column]][needs_default] <- defaults[[column]]
+  }
+  add_summary(
+    label,
+    if (any(needs_default)) "repaired" else "unchanged",
+    paste(
+      "Filled all-NA",
+      group_label,
+      "rows with VisionEval defaults only where corresponding transit service is zero; rows:",
+      sum(needs_default),
+      "all-NA rows with nonzero service left for manual review:",
+      sum(unsafe_missing)
+    )
+  )
+  repaired
+}
+
+repair_region_base_year_dvmt <- function(data, label, state_abbr = "VA") {
+  require_columns(data, c("StateAbbrLookup", "HvyTrkDvmt"), label)
+  if (nrow(data) != 1) {
+    stop(label, " must have exactly one Region row.", call. = FALSE)
+  }
+
+  missing_state <- !nzchar(trimws(data$StateAbbrLookup)) | is.na(data$StateAbbrLookup)
+  missing_hvy <- !nzchar(trimws(data$HvyTrkDvmt)) | is.na(data$HvyTrkDvmt) | toupper(trimws(data$HvyTrkDvmt)) == "NA"
+  if (missing_state && missing_hvy) {
+    data$StateAbbrLookup <- state_abbr
+    add_summary(
+      label,
+      "repaired",
+      paste(
+        "Set blank StateAbbrLookup to",
+        state_abbr,
+        "so VisionEval computes NA HvyTrkDvmt from state default rates."
+      )
+    )
+  } else {
+    add_summary(label, "unchanged", "StateAbbrLookup/HvyTrkDvmt combination does not need repair.")
+  }
+  data
+}
+
 validate_bzone_geo_values <- function() {
   bzone_files <- list.files(updated_dir, pattern = "bzone.*\\.csv$", recursive = TRUE, full.names = TRUE, ignore.case = TRUE)
   for (path in bzone_files) {
@@ -304,13 +425,18 @@ validate_preconditions <- function() {
     "geo.csv",
     "deflators.csv",
     "01_azone_carsvc_characteristic.csv",
+    "09_azone_hh_veh_mean_age.csv",
     "20_bzone_carsvc_availability.csv",
     "21_bzone_dwelling_units.csv",
     "23_bzone_hh_inc_qrtl_prop.csv",
     "24_bzone_lat_lon.csv",
     "25_bzone_network_design.csv",
     "28_bzone_travel_demand_management.csv",
-    "29_bzone_unprotected_area.csv"
+    "29_bzone_unprotected_area.csv",
+    "marea_transit_service.csv",
+    "marea_transit_fuel.csv",
+    "marea_transit_powertrain_prop.csv",
+    "region_base_year_dvmt.csv"
   )
   invisible(vapply(expected_files, find_one_file, character(1)))
 }
@@ -320,6 +446,7 @@ validate_preconditions()
 geo_path <- find_one_file("geo.csv")
 deflators_path <- find_one_file("deflators.csv")
 azone_carsvc_characteristic_path <- find_one_file("01_azone_carsvc_characteristic.csv")
+hh_veh_mean_age_path <- find_one_file("09_azone_hh_veh_mean_age.csv")
 carsvc_path <- find_one_file("20_bzone_carsvc_availability.csv")
 du_path <- find_one_file("21_bzone_dwelling_units.csv")
 inc_path <- find_one_file("23_bzone_hh_inc_qrtl_prop.csv")
@@ -327,6 +454,10 @@ latlon_path <- find_one_file("24_bzone_lat_lon.csv")
 network_path <- find_one_file("25_bzone_network_design.csv")
 tdm_path <- find_one_file("28_bzone_travel_demand_management.csv")
 unprotected_path <- find_one_file("29_bzone_unprotected_area.csv")
+marea_transit_service_path <- find_one_file("marea_transit_service.csv")
+marea_transit_fuel_path <- find_one_file("marea_transit_fuel.csv")
+marea_transit_powertrain_path <- find_one_file("marea_transit_powertrain_prop.csv")
+region_base_year_dvmt_path <- find_one_file("region_base_year_dvmt.csv")
 
 geo <- read_chr(geo_path)
 require_columns(geo, "Bzone", "geo.csv")
@@ -352,6 +483,16 @@ if (isTRUE(attr(azone_carsvc_characteristic, "needs_write"))) {
   attr(azone_carsvc_characteristic, "needs_write") <- NULL
   add_summary("01_azone_carsvc_characteristic.csv", "unchanged", "No NBSP artifacts found.")
 }
+
+hh_veh_mean_age <- read_chr(hh_veh_mean_age_path)
+hh_veh_mean_age_original <- hh_veh_mean_age
+hh_veh_mean_age <- cap_vehicle_mean_age(hh_veh_mean_age, "09_azone_hh_veh_mean_age.csv")
+write_if_changed(
+  hh_veh_mean_age_original,
+  hh_veh_mean_age,
+  hh_veh_mean_age_path,
+  "09_azone_hh_veh_mean_age.csv"
+)
 
 du <- read_chr(du_path)
 du_original <- du
@@ -400,6 +541,71 @@ carsvc <- read_chr(carsvc_path)
 carsvc_original <- carsvc
 carsvc <- ensure_2045_from_2024(carsvc, "bzone_carsvc_availability.csv")
 write_if_changed(carsvc_original, carsvc, carsvc_path, "20_bzone_carsvc_availability.csv")
+
+marea_transit_service <- read_chr(marea_transit_service_path)
+marea_transit_fuel <- read_chr(marea_transit_fuel_path)
+marea_transit_fuel_original <- marea_transit_fuel
+marea_transit_fuel <- fill_zero_service_transit_defaults(
+  marea_transit_fuel,
+  marea_transit_service,
+  c("VanPropDiesel", "VanPropGasoline", "VanPropCng"),
+  c(VanPropDiesel = "0", VanPropGasoline = "1", VanPropCng = "0"),
+  c("DRRevMi", "VPRevMi"),
+  "marea_transit_fuel.csv",
+  "Van"
+)
+marea_transit_fuel <- fill_zero_service_transit_defaults(
+  marea_transit_fuel,
+  marea_transit_service,
+  c("BusPropDiesel", "BusPropGasoline", "BusPropCng"),
+  c(BusPropDiesel = "1", BusPropGasoline = "0", BusPropCng = "0"),
+  c("MBRevMi", "RBRevMi"),
+  "marea_transit_fuel.csv",
+  "Bus"
+)
+write_if_changed(
+  marea_transit_fuel_original,
+  marea_transit_fuel,
+  marea_transit_fuel_path,
+  "marea_transit_fuel.csv"
+)
+
+marea_transit_powertrain <- read_chr(marea_transit_powertrain_path)
+marea_transit_powertrain_original <- marea_transit_powertrain
+marea_transit_powertrain <- fill_zero_service_transit_defaults(
+  marea_transit_powertrain,
+  marea_transit_service,
+  c("VanPropIcev", "VanPropHev", "VanPropBev"),
+  c(VanPropIcev = "1", VanPropHev = "0", VanPropBev = "0"),
+  c("DRRevMi", "VPRevMi"),
+  "marea_transit_powertrain_prop.csv",
+  "Van"
+)
+marea_transit_powertrain <- fill_zero_service_transit_defaults(
+  marea_transit_powertrain,
+  marea_transit_service,
+  c("BusPropIcev", "BusPropHev", "BusPropBev"),
+  c(BusPropIcev = "1", BusPropHev = "0", BusPropBev = "0"),
+  c("MBRevMi", "RBRevMi"),
+  "marea_transit_powertrain_prop.csv",
+  "Bus"
+)
+write_if_changed(
+  marea_transit_powertrain_original,
+  marea_transit_powertrain,
+  marea_transit_powertrain_path,
+  "marea_transit_powertrain_prop.csv"
+)
+
+region_base_year_dvmt <- read_chr(region_base_year_dvmt_path)
+region_base_year_dvmt_original <- region_base_year_dvmt
+region_base_year_dvmt <- repair_region_base_year_dvmt(region_base_year_dvmt, "region_base_year_dvmt.csv")
+write_if_changed(
+  region_base_year_dvmt_original,
+  region_base_year_dvmt,
+  region_base_year_dvmt_path,
+  "region_base_year_dvmt.csv"
+)
 
 validate_no_backup_dirs_under_updatedcsvs()
 validate_bzone_geo_values()
