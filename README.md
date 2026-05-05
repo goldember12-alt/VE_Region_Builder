@@ -28,6 +28,7 @@ Have these items available:
 
 - A VisionEval template model folder
 - A Virginia statewide CSV input folder
+- The regional build manifest that matches the statewide input package
 - A VisionEval runtime installation compatible with the R version used to run
   models
 - A local clone of this repository
@@ -318,6 +319,9 @@ outputs/generated_models/<region_name>/results/
 ```
 
 Recommended Windows command sequence:
+
+Run the PowerShell commands first, then run the `.cmd` commands from the same
+repository root.
 
 ```powershell
 Rscript scripts/prepare_updatedcsvs_va_inputs.R "C:/path/to/updatedcsvs"

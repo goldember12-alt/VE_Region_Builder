@@ -56,6 +56,11 @@ VisionEval startup file, packages, and supporting runtime files.
 `VE_RUNTIME` is the folder VisionEval uses as the working runtime area for
 models.
 
+For normal VisionEval use, `VE_RUNTIME` may point to a separate models folder.
+For VE Region Builder, `configs/local_runtime.yml` can set `ve_runtime` to
+`outputs/generated_models` so generated regional models are visible to
+`openModel()`.
+
 Keep generated models separate from the base VisionEval installation.
 VE_RegionBuilder creates generated region models under:
 
@@ -96,13 +101,16 @@ created by the installer.
 In RGui, confirm that VisionEval functions such as these are available:
 
 ```r
-openModel
-installModel
+print(exists("openModel"))
+print(exists("installModel"))
 ```
 
-Equivalent VisionEval model-management functions are also acceptable. Keep this
-check minimal; the VE_RegionBuilder runtime check below is the important test
-for this project.
+Both checks should return `TRUE`. If VisionEval prints function definitions
+when you type `openModel` or `installModel` directly, that is also fine, but the
+boolean check is clearer.
+
+Keep this check minimal; the VE_RegionBuilder runtime check below is the
+important test for this project.
 
 ## 6. Find the Matching `Rscript.exe`
 
