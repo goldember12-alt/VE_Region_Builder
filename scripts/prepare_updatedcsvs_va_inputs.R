@@ -225,6 +225,61 @@ validate_year_coverage <- function(data, label, years = c("2024", "2045")) {
   }
 }
 
+add_static_years <- function(data, label, years = c("2024", "2045")) {
+  require_columns(data, "Geo", label)
+  if ("Year" %in% names(data)) {
+    validate_year_coverage(data, label, years)
+    return(data %>% arrange(Geo, Year))
+  }
+
+  if (any(!nzchar(trimws(data$Geo)))) {
+    stop(label, " has blank Geo values and cannot be expanded by year.", call. = FALSE)
+  }
+  duplicate_geo <- data %>% count(Geo, name = "n") %>% filter(n > 1)
+  if (nrow(duplicate_geo) > 0) {
+    stop(label, " has duplicate static Geo rows and cannot be expanded by year.", call. = FALSE)
+  }
+
+  expanded <- dplyr::bind_rows(lapply(years, function(year) {
+    year_data <- data
+    year_data$Year <- year
+    year_data
+  }))
+  expanded <- expanded[, c("Geo", "Year", setdiff(names(expanded), c("Geo", "Year")))]
+  add_summary(label, "repaired", paste("Added static Year rows:", paste(years, collapse = ", ")))
+  expanded %>% arrange(Geo, Year)
+}
+
+normalize_nbsp_csv <- function(path, label) {
+  raw <- readBin(path, what = "raw", n = file.info(path)$size)
+  nbsp <- raw == as.raw(0xA0)
+  if (!any(nbsp)) {
+    data <- read_chr(path)
+    attr(data, "needs_write") <- FALSE
+    return(data)
+  }
+
+  raw[nbsp] <- charToRaw(" ")
+  text <- rawToChar(raw)
+  repaired <- readr::read_csv(
+    I(text),
+    col_types = readr::cols(.default = readr::col_character()),
+    show_col_types = FALSE,
+    progress = FALSE,
+    trim_ws = TRUE
+  )
+  repaired[] <- lapply(repaired, function(column) {
+    if (is.character(column)) {
+      trimws(column)
+    } else {
+      column
+    }
+  })
+  add_summary(label, "repaired", paste("Replaced NBSP artifacts:", sum(nbsp)))
+  attr(repaired, "needs_write") <- TRUE
+  repaired
+}
+
 validate_bzone_geo_values <- function() {
   bzone_files <- list.files(updated_dir, pattern = "bzone.*\\.csv$", recursive = TRUE, full.names = TRUE, ignore.case = TRUE)
   for (path in bzone_files) {
@@ -248,6 +303,7 @@ validate_preconditions <- function() {
   expected_files <- c(
     "geo.csv",
     "deflators.csv",
+    "01_azone_carsvc_characteristic.csv",
     "20_bzone_carsvc_availability.csv",
     "21_bzone_dwelling_units.csv",
     "23_bzone_hh_inc_qrtl_prop.csv",
@@ -263,6 +319,7 @@ validate_preconditions()
 
 geo_path <- find_one_file("geo.csv")
 deflators_path <- find_one_file("deflators.csv")
+azone_carsvc_characteristic_path <- find_one_file("01_azone_carsvc_characteristic.csv")
 carsvc_path <- find_one_file("20_bzone_carsvc_availability.csv")
 du_path <- find_one_file("21_bzone_dwelling_units.csv")
 inc_path <- find_one_file("23_bzone_hh_inc_qrtl_prop.csv")
@@ -276,6 +333,24 @@ require_columns(geo, "Bzone", "geo.csv")
 bzones <- as.character(geo$Bzone)
 if (any(!nzchar(trimws(bzones)))) {
   stop("geo.csv contains blank Bzone values.", call. = FALSE)
+}
+
+azone_carsvc_characteristic <- normalize_nbsp_csv(
+  azone_carsvc_characteristic_path,
+  "01_azone_carsvc_characteristic.csv"
+)
+if (isTRUE(attr(azone_carsvc_characteristic, "needs_write"))) {
+  attr(azone_carsvc_characteristic, "needs_write") <- NULL
+  azone_carsvc_characteristic_original <- read_chr(azone_carsvc_characteristic_path)
+  write_if_changed(
+    azone_carsvc_characteristic_original,
+    azone_carsvc_characteristic,
+    azone_carsvc_characteristic_path,
+    "01_azone_carsvc_characteristic.csv"
+  )
+} else {
+  attr(azone_carsvc_characteristic, "needs_write") <- NULL
+  add_summary("01_azone_carsvc_characteristic.csv", "unchanged", "No NBSP artifacts found.")
 }
 
 du <- read_chr(du_path)
@@ -306,6 +381,7 @@ unprotected <- rename_if_present(unprotected, "Urban", "UrbanArea")
 unprotected <- rename_if_present(unprotected, "Town", "TownArea")
 unprotected <- rename_if_present(unprotected, "Rural", "RuralArea")
 require_columns(unprotected, c("Geo", "UrbanArea", "TownArea", "RuralArea"), "bzone_unprotected_area.csv")
+unprotected <- add_static_years(unprotected, "bzone_unprotected_area.csv")
 write_if_changed(unprotected_original, unprotected, unprotected_path, "29_bzone_unprotected_area.csv")
 
 network <- read_chr(network_path)
@@ -328,6 +404,7 @@ write_if_changed(carsvc_original, carsvc, carsvc_path, "20_bzone_carsvc_availabi
 validate_no_backup_dirs_under_updatedcsvs()
 validate_bzone_geo_values()
 validate_year_coverage(latlon, "bzone_lat_lon.csv")
+validate_year_coverage(unprotected, "bzone_unprotected_area.csv")
 validate_year_coverage(tdm, "bzone_travel_demand_management.csv")
 validate_year_coverage(carsvc, "bzone_carsvc_availability.csv")
 validate_deflators(deflators_path)
