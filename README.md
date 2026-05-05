@@ -2,7 +2,7 @@
 
 VE Region Builder is a standalone R project for creating region-specific
 VisionEval model folders from a statewide VisionEval template model and a user
-supplied folder of corrected statewide CSV inputs.
+supplied folder of Virginia statewide CSV inputs prepared for this workflow.
 
 The workflow is non-destructive. It does not modify VisionEval source code, the
 template model, or the source input package. Generated models, reports, and logs
@@ -11,7 +11,7 @@ are written under `outputs/`.
 ## Workflow Overview
 
 ```text
-prepare VA updated CSVs → assemble statewide source model → build regional model → configure VisionEval runtime → run generated region
+prepare VA updated CSVs -> assemble statewide source model -> build regional model -> configure VisionEval runtime -> run generated region
 ```
 
 The repository contains code, metadata, and example configs. It does not ship
@@ -20,6 +20,16 @@ the Virginia source data, template VisionEval models, or generated results.
 The Greater Richmond example has been tested end to end with the prepared
 Virginia updated CSV workflow. Other regions should use the same preparation,
 assembly, build, and run sequence and may reveal additional source-data issues.
+
+## Before You Start
+
+Have these items available:
+
+- A VisionEval template model folder
+- A Virginia statewide CSV input folder
+- A VisionEval runtime installation compatible with the R version used to run
+  models
+- A local clone of this repository
 
 ## Requirements
 
@@ -214,8 +224,11 @@ creates `results/` when the model is run.
 
 ## Configure VisionEval Runtime
 
-VisionEval is not included in this repository. Configure the local runtime by
-copying the example config:
+VisionEval is not included in this repository. The runtime is only required for
+checking and running generated models; preparation, assembly, and region
+building can be done before runtime configuration.
+
+Configure the local runtime by copying the example config:
 
 ```powershell
 Copy-Item configs/local_runtime.example.yml configs/local_runtime.yml
@@ -251,6 +264,8 @@ Some R installations put `Rscript.exe` under `bin\x64`:
 ```powershell
 $env:VE_RSCRIPT = "$env:LOCALAPPDATA\Programs\R\R-4.4.2\bin\x64\Rscript.exe"
 ```
+
+This sets `VE_RSCRIPT` for the current PowerShell session.
 
 Check the runtime:
 
@@ -334,6 +349,12 @@ Allowed `action` values:
 
 The generated geography file is written from the filtered statewide geography
 file and should not be listed as a copied manifest row.
+
+The regional build manifest must match the statewide input package. The
+included `metadata/input_manifest.csv` is a sample manifest used by the fixture
+workflow. For Virginia statewide model builds, use the manifest configured for
+that input package, such as `metadata/input_manifest_wppdc_full.csv`, or update
+the manifest only when using a different input package.
 
 ## Generated Files and Local Configs
 
