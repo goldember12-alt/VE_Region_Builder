@@ -9,3 +9,4 @@ configs/*.yml
 !outputs/reports/.gitkeep
 !outputs/logs/.gitkeep
 !configs/*.example.yml
+!configs/local_runtime.example.yml

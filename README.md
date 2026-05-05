@@ -154,10 +154,43 @@ outputs/reports/my_region_validation.csv
 
 The generated model folder is a runnable VisionEval model structure. It includes the scaffold copied from the assembled statewide source model, filtered regional inputs, generated regional geography, `queries/`, `scripts/`, and root model files such as `visioneval.cnf`. It does not copy `results/`; VisionEval creates `results/` when the model runs.
 
-Run the generated model from its model folder:
+## Running a Generated Region Model
+
+VisionEval must be installed separately. On machines where VisionEval is not visible in the normal R library path, configure the runtime with `VE_HOME` or a local ignored config file.
+
+Check what RegionBuilder can see:
 
 ```powershell
-Rscript -e "setwd('outputs/generated_models/my_region'); library(visioneval); initializeModel(); source(file.path('scripts', 'run_model.R'))"
+Rscript scripts/check_visioneval_runtime.R
+```
+
+If needed, copy the local runtime example and edit it for your machine:
+
+```powershell
+Copy-Item configs/local_runtime.example.yml configs/local_runtime.yml
+```
+
+Example local runtime config:
+
+```yaml
+ve_home: "C:/Path/To/VisionEval"
+ve_runtime: "C:/Path/To/VE_RegionBuilder/outputs/generated_models"
+```
+
+Run a generated region model:
+
+```powershell
+Rscript scripts/run_region_model.R greater_richmond
+```
+
+Replace `greater_richmond` with another generated folder name, such as `hampton_roads` or `wppdc`.
+
+The runner loads VisionEval from `VE_HOME/VisionEval.R` when available, otherwise it uses the `visioneval` package only if that package is installed in the active R library path. Do not call `library(visioneval)` directly unless you have installed VisionEval into the normal R library used by `Rscript`.
+
+After a successful run, outputs are written under:
+
+```text
+outputs/generated_models/<region_name>/results/
 ```
 
 ## Manifest Rules
@@ -203,6 +236,7 @@ Local config files are excluded from git because they contain machine-specific p
 ```text
 configs/statewide_assembly.example.yml  ->  configs/statewide_assembly.yml
 configs/region.example.yml              ->  configs/my_region.yml
+configs/local_runtime.example.yml       ->  configs/local_runtime.yml
 ```
 
 Only the example config files are intended to be shared in the repository.
