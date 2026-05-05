@@ -1,48 +1,37 @@
 # VE Region Builder
 
-VE Region Builder is a standalone R project for creating region-specific VisionEval
-input folders from a statewide VisionEval model assembled from a template model
-and corrected statewide CSV inputs.
+VE Region Builder is a standalone R project for creating region-specific
+VisionEval model folders from a statewide VisionEval template model and a user
+supplied folder of corrected statewide CSV inputs.
 
-The project is non-destructive. It does not modify VisionEval source code,
-statewide source inputs, template model folders, or existing model repositories.
-It writes generated models, reports, and logs under this repository's
-`outputs/` folder.
+The workflow is non-destructive. It does not modify VisionEval source code, the
+template model, or the source input package. Generated models, reports, and logs
+are written under `outputs/`.
 
-## What This Project Does
+## Workflow Overview
 
-The workflow has two main steps.
+```text
+prepare VA updated CSVs → assemble statewide source model → build regional model → configure VisionEval runtime → run generated region
+```
 
-First, it creates a statewide source model. It copies a template VisionEval model and adds corrected statewide CSV inputs to the generated copy.
+The repository contains code, metadata, and example configs. It does not ship
+the Virginia source data, template VisionEval models, or generated results.
 
-Second, it creates a regional model folder. It filters the statewide model
-inputs to a selected set of Mareas and writes a region-specific VisionEval input
-folder.
-
-The statewide geography file defines which zones belong to each region. You
-select the Mareas, and the workflow finds the related Azones and Bzones from
-that file.
-
-This RegionBuilder workflow currently supports Azone, Bzone, and Marea
-geography. The current statewide source data does not define meaningful Czones.
-VisionEval still requires a `Czone` column in `defs/geo.csv`, so RegionBuilder
-writes literal `NA` values in that column when Czones are absent. In VisionEval,
-that is the mechanical sentinel for unspecified Czones; it is not an analytical
-Czone assignment.
-
-File handling is controlled by `metadata/input_manifest.csv`. The workflow does not guess how each file should be filtered or copied.
+The Greater Richmond example has been tested end to end with the prepared
+Virginia updated CSV workflow. Other regions should use the same preparation,
+assembly, build, and run sequence and may reveal additional source-data issues.
 
 ## Requirements
 
-Install R and these R packages:
+Install R and the RegionBuilder support packages:
 
 ```r
 install.packages(c("readr", "dplyr", "yaml", "fs", "tibble"))
 ```
 
-Install the packages into the same R version you will use to run RegionBuilder.
-If VisionEval requires R 4.4.2 and you set `VE_RSCRIPT` to R 4.4.2, install the
-support packages into R 4.4.2:
+Install these packages into the same R version you will use for RegionBuilder
+and VisionEval. If your VisionEval runtime requires R 4.4.2, install the
+packages into R 4.4.2.
 
 ```powershell
 & "$env:LOCALAPPDATA\Programs\R\R-4.4.2\bin\Rscript.exe" -e "install.packages(c('yaml','readr','dplyr','fs','tibble'), repos='https://cloud.r-project.org')"
@@ -54,7 +43,7 @@ Some R installations use `bin\x64`:
 & "$env:LOCALAPPDATA\Programs\R\R-4.4.2\bin\x64\Rscript.exe" -e "install.packages(c('yaml','readr','dplyr','fs','tibble'), repos='https://cloud.r-project.org')"
 ```
 
-Run all commands from the repository root.
+Run commands from the repository root.
 
 ## Repository Layout
 
@@ -62,15 +51,16 @@ Run all commands from the repository root.
 R/                         Reusable R functions
 scripts/                   Command-line entry points
 configs/                   Example configs to copy before editing
-metadata/                  Input manifest and approved mapping metadata
+metadata/                  Input manifest and mapping metadata
 data_sources/filelist.txt  Expected statewide input file list
 tests/fixtures/            Small fixture model for smoke testing
-outputs/                   Runtime outputs; ignored by git
+outputs/                   Generated outputs; ignored by git
 ```
 
 ## Quick Smoke Test
 
-Run the fixture smoke test to confirm that the project works without private or external data:
+Run the fixture smoke test to confirm that RegionBuilder works without external
+data:
 
 ```powershell
 Rscript scripts/run_fixture_smoke.R
@@ -83,14 +73,32 @@ outputs/generated_models/fixture_smoke/
 outputs/reports/fixture_smoke_validation.csv
 ```
 
-The smoke test uses:
+## Prepare Virginia Updated CSVs
 
-```text
-tests/fixtures/statewide_model
-metadata/input_manifest.csv
+Before assembling the statewide source model, normalize the Virginia updated CSV
+folder into the input contract expected by this project.
+
+```powershell
+Rscript scripts/prepare_updatedcsvs_va_inputs.R "C:/path/to/updatedcsvs"
 ```
 
-## Step 1: Configure Statewide Assembly
+Pass your own `updatedcsvs` path explicitly. Do not rely on machine-specific
+defaults.
+
+This step is safe to rerun. It validates and standardizes the updated CSVs used
+by the statewide assembly step. When changes are needed, it writes backups
+outside the updated CSV folder so backup files are not mistaken for model
+inputs.
+
+The preparation step is intended for Virginia statewide input packages. It
+preserves geography IDs as text, checks required year coverage, applies
+documented VisionEval compatibility adjustments, and verifies that required
+support files such as `deflators.csv` are available.
+
+If you are using an already prepared input package, this step should complete
+without changes and serves as a validation check.
+
+## Assemble Statewide Source Model
 
 Copy the example statewide assembly config:
 
@@ -98,12 +106,13 @@ Copy the example statewide assembly config:
 Copy-Item configs/statewide_assembly.example.yml configs/statewide_assembly.yml
 ```
 
-Edit `configs/statewide_assembly.yml`:
+Edit `configs/statewide_assembly.yml` for your template model and prepared
+updated CSV folder:
 
 ```yaml
 paths:
   template_model_dir: C:/path/to/template_model
-  updated_csv_dir: C:/path/to/statewide_csv_inputs
+  updated_csv_dir: C:/path/to/updatedcsvs
   filelist_path: data_sources/filelist.txt
   manual_mapping_path: metadata/statewide_manual_file_mappings.csv
   column_renames_path: metadata/statewide_column_renames.csv
@@ -115,7 +124,7 @@ paths:
 explicit_file_injections:
   - source: deflators.csv
     destination: defs/deflators.csv
-    notes: Injected updated deflators file into defs/deflators.csv.
+    notes: Inject updated deflators file into defs/deflators.csv.
 
 required_deflator_years:
   - 2024
@@ -123,39 +132,34 @@ required_deflator_years:
 overwrite_output: true
 ```
 
-The assembly step copies `template_model_dir` into:
-
-```text
-outputs/generated_models/statewide_va_clean
-```
-
-Then it adds approved or clearly matched corrected CSVs from `updated_csv_dir` to that generated copy.
-
-Statewide assembly also supports explicit file injections for corrected CSVs
-that belong outside `inputs/`. The default config injects updated
-`deflators.csv` into `defs/deflators.csv` and validates that the generated file
-includes required deflator years.
-
-The original template model and statewide CSV folders are not modified.
-
-Run the assembly step:
+Run statewide assembly:
 
 ```powershell
 Rscript scripts/assemble_statewide_model.R configs/statewide_assembly.yml
 ```
 
-Review the reports:
+The assembly script copies the template model into:
+
+```text
+outputs/generated_models/statewide_va_clean
+```
+
+Then it injects the prepared statewide CSVs into that generated copy according
+to `data_sources/filelist.txt`, metadata mappings, column rename rules, and
+explicit file injections.
+
+Review the reports before building regions:
 
 ```text
 outputs/reports/statewide_assembly_report.csv
 outputs/reports/statewide_column_rename_report.csv
 ```
 
-Fix any missing, ambiguous, or unmapped files before using the generated statewide model for regional builds.
+Resolve missing, ambiguous, or unmapped required files before continuing.
 
-## Step 2: Configure a Regional Build
+## Build a Regional Model
 
-Copy the region example config:
+Copy the example region config:
 
 ```powershell
 Copy-Item configs/region.example.yml configs/my_region.yml
@@ -169,13 +173,14 @@ region:
   model_region: My Region
   scenario: Base
   description: VERSPM for My Region model
+  base_year: 2024
+  years:
+    - 2024
+    - 2045
   mareas:
     - Example Marea
   region_geo_values:
     - Virginia
-  # auto treats Czone as absent when the source geography has no meaningful
-  # Czone values. VisionEval requires a Czone column, so absent Czones are
-  # written as literal NA values.
   czone_mode: auto
 
 paths:
@@ -185,6 +190,11 @@ paths:
   manifest: metadata/input_manifest.csv
   geography_file: defs/geo.csv
 ```
+
+The geography crosswalk is authoritative. Select the region by listing Mareas;
+RegionBuilder derives the allowed Azones and Bzones from the filtered geography
+file. `czone_mode: auto` writes VisionEval-compatible `NA` Czone values when
+the source geography has no meaningful Czone values.
 
 Run the regional build:
 
@@ -199,174 +209,38 @@ outputs/generated_models/my_region/
 outputs/reports/my_region_validation.csv
 ```
 
-The generated model folder is a runnable VisionEval model structure. It includes
-the scaffold copied from the assembled statewide source model, filtered regional
-inputs, generated regional geography, `queries/`, `scripts/`, and root model
-files such as `visioneval.cnf`. It does not copy `results/`; VisionEval creates
-`results/` when the model runs.
+The generated folder is a runnable VisionEval model structure. VisionEval
+creates `results/` when the model is run.
 
-## Running a Generated Region Model
+## Configure VisionEval Runtime
 
-Before RegionBuilder can run a generated model, it must know where VisionEval is installed. VisionEval is not included in this repository.
-
-Configure VisionEval with a local file:
+VisionEval is not included in this repository. Configure the local runtime by
+copying the example config:
 
 ```powershell
 Copy-Item configs/local_runtime.example.yml configs/local_runtime.yml
 ```
 
-`configs/local_runtime.yml` is ignored by git, so it can contain paths that are specific to your computer.
+`configs/local_runtime.yml` is ignored by git and may contain paths specific to
+your computer.
 
-The correct VisionEval folder is the folder that contains this file:
-
-```text
-VisionEval.R
-```
-
-VisionEval is often installed somewhere like:
-
-```text
-C:/VisionEval
-C:/Users/<your-name>/Documents/VisionEval
-C:/Users/<your-name>/source/VisionEval
-```
-
-To find `VisionEval.R`, search your user folder first:
-
-```powershell
-Get-ChildItem "$env:USERPROFILE" -Recurse -Filter "VisionEval.R" -ErrorAction SilentlyContinue |
-  Select-Object FullName
-```
-
-If that does not find it, search `C:\`. This can take a while:
-
-```powershell
-Get-ChildItem "C:\" -Recurse -Filter "VisionEval.R" -ErrorAction SilentlyContinue |
-  Select-Object FullName
-```
-
-The PowerShell search returns the full path to the `VisionEval.R` file.
-`ve_home` must be the folder that contains `VisionEval.R`, not the file itself.
-Do not include `/VisionEval.R` at the end of `ve_home`.
-
-For example, if PowerShell returns:
-
-```text
-C:\VisionEval\VisionEval.R
-```
-
-then `ve_home` is:
-
-```text
-C:/VisionEval
-```
-
-Another example:
-
-```text
-C:\...\runtime\VisionEval.R
-```
-
-becomes:
-
-```yaml
-ve_home: "C:/.../runtime"
-```
-
-Use forward slashes in YAML paths, even on Windows. Edit `configs/local_runtime.yml`:
+Set `ve_home` to the folder that contains `VisionEval.R`, not to the file
+itself:
 
 ```yaml
 ve_home: "C:/Path/To/Folder/Containing/VisionEval.R"
 ve_runtime: "outputs/generated_models"
 
-# Optional. R scripts cannot change the R executable after startup;
-# the PowerShell wrappers use this path to launch the matching Rscript.
+# Optional. PowerShell wrappers can use this path to launch the matching Rscript.
 rscript: "C:/Path/To/R-4.4.2/bin/Rscript.exe"
 ```
 
-`ve_runtime` can stay as `outputs/generated_models` when you run commands from the RegionBuilder repository root.
+Use forward slashes in YAML paths.
 
-Check the runtime:
+On Windows, the `.cmd` wrappers are the recommended run path. They avoid common
+PowerShell script execution-policy blocks and use `VE_RSCRIPT` when it is set.
 
-```cmd
-scripts\check_visioneval_runtime.cmd
-```
-
-The `.cmd` wrappers are recommended on Windows because they avoid common
-PowerShell script execution-policy blocks. They use `VE_RSCRIPT` when it is set;
-otherwise they use plain `Rscript` from `PATH`.
-
-A configured runtime should show:
-
-```text
-VE_HOME exists: TRUE
-VE_HOME/VisionEval.R exists: TRUE
-VisionEval startup check: TRUE
-```
-
-It is okay if this line is `FALSE`:
-
-```text
-Package 'visioneval' visible: FALSE
-```
-
-Run a generated region model:
-
-```cmd
-scripts\run_region_model.cmd greater_richmond
-```
-
-The wrapper loads VisionEval, sets `VE_RUNTIME` to `outputs/generated_models`,
-and runs the VE-3 model object API internally:
-
-```r
-mod <- openModel("greater_richmond")
-mod$run()
-```
-
-Replace `greater_richmond` with another generated folder name, such as `hampton_roads` or `wppdc`.
-
-After a successful run, outputs are written under:
-
-```text
-outputs/generated_models/<region_name>/results/
-```
-
-### Find the Matching Rscript
-
-RegionBuilder uses the Rscript executable that launches the script. If VisionEval was built for R 4.4.2, use the `Rscript.exe` from an R 4.4.2 installation.
-
-List installed R versions in common Windows locations:
-
-```powershell
-Get-ChildItem "$env:LOCALAPPDATA\Programs\R" -Directory
-Get-ChildItem "C:/Program Files/R" -Directory -ErrorAction SilentlyContinue
-```
-
-Find available `Rscript.exe` files:
-
-```powershell
-Get-ChildItem "$env:LOCALAPPDATA\Programs\R" -Recurse -Filter "Rscript.exe" -ErrorAction SilentlyContinue |
-  Select-Object FullName
-
-Get-ChildItem "C:/Program Files/R" -Recurse -Filter "Rscript.exe" -ErrorAction SilentlyContinue |
-  Select-Object FullName
-```
-
-Choose the `Rscript.exe` under the R version expected by your VisionEval runtime, such as `R-4.4.2`.
-
-The expected sequence is:
-
-1. Find installed R versions.
-2. Find `Rscript.exe` files.
-3. Pick the `Rscript.exe` under the R version expected by VisionEval.
-4. Install RegionBuilder support packages into that R version if needed.
-5. Set `VE_RSCRIPT`.
-6. Run `scripts\check_visioneval_runtime.cmd`.
-7. Run `scripts\run_region_model.cmd greater_richmond`.
-
-For Windows users, the `.cmd` wrappers are the recommended way to use a matching
-Rscript without changing PowerShell execution policy. Set `VE_RSCRIPT`, then run:
+Set `VE_RSCRIPT` to the R version required by your installed VisionEval runtime:
 
 ```powershell
 $env:VE_RSCRIPT = "$env:LOCALAPPDATA\Programs\R\R-4.4.2\bin\Rscript.exe"
@@ -378,167 +252,92 @@ Some R installations put `Rscript.exe` under `bin\x64`:
 $env:VE_RSCRIPT = "$env:LOCALAPPDATA\Programs\R\R-4.4.2\bin\x64\Rscript.exe"
 ```
 
-Then run:
+Check the runtime:
 
 ```cmd
 scripts\check_visioneval_runtime.cmd
-scripts\run_region_model.cmd greater_richmond
 ```
 
-If you use the PowerShell wrappers, they can also read `rscript:` from `configs/local_runtime.yml`:
+A usable runtime should report that `VE_HOME` exists, `VisionEval.R` exists,
+and VisionEval startup succeeds.
+
+PowerShell `.ps1` wrappers are optional advanced alternatives. They may require
+per-command execution-policy handling:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\check_visioneval_runtime.ps1
-powershell -ExecutionPolicy Bypass -File .\scripts\run_region_model.ps1 greater_richmond
 ```
 
-Direct Rscript commands still work if you prefer them:
+The `.cmd` wrappers remain the primary recommended Windows path.
 
-```powershell
-& "C:/Path/To/R-4.4.2/bin/Rscript.exe" scripts/check_visioneval_runtime.R
-& "C:/Path/To/R-4.4.2/bin/Rscript.exe" scripts/run_region_model.R greater_richmond
-```
+## Run a Generated Region
 
-### Optional: Save the Matching Rscript Path
-
-To save `VE_RSCRIPT` for your Windows user:
-
-```powershell
-[Environment]::SetEnvironmentVariable(
-  "VE_RSCRIPT",
-  "$env:LOCALAPPDATA\Programs\R\R-4.4.2\bin\Rscript.exe",
-  "User"
-)
-```
-
-Close and reopen PowerShell after setting it permanently.
-
-### Runtime Troubleshooting
-
-`VisionEval.R` not found:
-
-VisionEval may not be installed on this machine, or it may be installed
-somewhere outside your user folder. Try the broader `C:\` search above, or
-reinstall VisionEval and note the install folder.
-
-`check_visioneval_runtime.R` still says `VE_HOME` is unset:
-
-Make sure you copied `configs/local_runtime.example.yml` to exactly
-`configs/local_runtime.yml`. Check that the file has a `ve_home:` line and that
-the path uses forward slashes.
-
-`configs/local_runtime.yml exists, but the active R library does not have package 'yaml' installed`:
-
-Install `yaml` into the same R version that is running RegionBuilder. If you are using R 4.4.2 because VisionEval requires it, run:
-
-```powershell
-& "$env:LOCALAPPDATA\Programs\R\R-4.4.2\bin\Rscript.exe" -e "install.packages('yaml', repos='https://cloud.r-project.org')"
-```
-
-The runtime scripts can read simple `ve_home`, `ve_runtime`, and `rscript` lines
-without `yaml`, but installing `yaml` gives full YAML support and avoids
-surprises.
-
-`Package 'visioneval' visible` is `FALSE`:
-
-That is normal for many VisionEval installs. RegionBuilder can still run models if `VE_HOME/VisionEval.R exists` and `VisionEval startup check` are both `TRUE`.
-
-`openModel() is not available`:
-
-The VisionEval runtime loaded, but the expected VE-3 API was not exposed. Confirm
-that `VE_HOME` points to the runtime folder containing `VisionEval.R`, confirm
-the runtime is compatible with the selected R version, and rerun:
+After preparing inputs, assembling the statewide model, building the region, and
+configuring the runtime, run the generated region model:
 
 ```cmd
-scripts\check_visioneval_runtime.cmd
+scripts\run_region_model.cmd greater_richmond
 ```
 
-`initializeModel() not found`:
+Replace `greater_richmond` with the generated model folder name.
 
-This usually means old or classic VisionEval run instructions are being used.
-RegionBuilder uses the VE-3 API:
+The wrapper sets the VisionEval runtime context and runs the VE-3 model object
+API internally:
 
 ```r
-mod <- openModel("modelName")
-mod$run()
+model <- openModel("greater_richmond")
+model$run()
 ```
 
-Use the current runner:
+Results are written under:
 
-```cmd
-scripts\run_region_model.cmd <model_name>
+```text
+outputs/generated_models/<region_name>/results/
 ```
 
-`Incorrect R version for this VisionEval installation`:
+Recommended Windows command sequence:
 
-RegionBuilder uses whichever `Rscript` command you run. If plain `Rscript`
-points to R 4.5.2, but your VisionEval runtime was built for R 4.4.2, the
-runtime check or model run will fail.
-
-Use the matching Rscript explicitly, for example:
+```powershell
+Rscript scripts/prepare_updatedcsvs_va_inputs.R "C:/path/to/updatedcsvs"
+Rscript scripts/assemble_statewide_model.R configs/statewide_assembly.yml
+Rscript scripts/build_region_model.R configs/greater_richmond.yml
+$env:VE_RSCRIPT = "$env:LOCALAPPDATA\Programs\R\R-4.4.2\bin\Rscript.exe"
+```
 
 ```cmd
 scripts\check_visioneval_runtime.cmd
 scripts\run_region_model.cmd greater_richmond
-```
-
-The `.cmd` wrappers use `VE_RSCRIPT` first, then plain `Rscript` from `PATH`.
-The optional `.ps1` wrappers also support `configs/local_runtime.yml` field
-`rscript:`. You can also point `ve_home` to a VisionEval runtime built for the
-active R version reported by:
-
-```powershell
-Rscript --version
-```
-
-`incomplete final line found on configs/local_runtime.yml`:
-
-This warning is harmless. Open `configs/local_runtime.yml`, put your cursor at
-the end of the file, press Enter once, and save it so the YAML file ends with a
-final blank line.
-
-Advanced option:
-
-Instead of `configs/local_runtime.yml`, you can set environment variables in PowerShell. The local config file is usually simpler.
-
-```powershell
-$env:VE_HOME = "C:/VisionEval"
-$env:VE_RUNTIME = "outputs/generated_models"
 ```
 
 ## Manifest Rules
 
-`metadata/input_manifest.csv` tells the workflow how to handle each input file.
-
-It must contain these columns:
+The regional build uses the configured manifest to determine how each file is
+handled. A manifest row has:
 
 ```text
 file,geo_level,action,notes
 ```
 
-Allowed `geo_level` values are:
+Allowed `geo_level` values:
 
 ```text
 Region, Marea, Azone, Bzone, Czone
 ```
 
-Allowed `action` values are:
+Allowed `action` values:
 
 | Action | Meaning |
-|---|---|
-| `filter_geo` | The file must have a `Geo` column. The workflow keeps only rows whose `Geo` value belongs to the allowed geography list for that file. |
-| `copy` | The workflow copies the file unchanged. If the file has `Geo` values, it checks them during validation. |
-| `review` | The workflow skips the file and records it in the validation report for manual review. |
+| --- | --- |
+| `filter_geo` | Keep rows whose `Geo` value belongs to the allowed geography list for that file. |
+| `copy` | Copy the file unchanged. |
+| `review` | Skip the file and record it in the validation report. |
 
-The generated geography file is written from the filtered statewide geography file. It should not be listed as a copied manifest row.
+The generated geography file is written from the filtered statewide geography
+file and should not be listed as a copied manifest row.
 
 ## Generated Files and Local Configs
 
-This repository contains the code, metadata, and example configs needed to run
-the workflow. It does not include statewide input data, template VisionEval
-models, generated regional models, or VisionEval run outputs.
-
-Generated files are written under `outputs/`:
+Generated files are written under:
 
 ```text
 outputs/generated_models/
@@ -546,14 +345,13 @@ outputs/reports/
 outputs/logs/
 ```
 
-Local config files are excluded from git because they contain machine-specific
-paths. To run the workflow, copy the example configs and edit the copies for
-your local setup:
+Local configs are excluded from git because they contain machine-specific
+paths. Copy the examples and edit the copies:
 
 ```text
-configs/statewide_assembly.example.yml  ->  configs/statewide_assembly.yml
-configs/region.example.yml              ->  configs/my_region.yml
-configs/local_runtime.example.yml       ->  configs/local_runtime.yml
+configs/statewide_assembly.example.yml -> configs/statewide_assembly.yml
+configs/region.example.yml             -> configs/my_region.yml
+configs/local_runtime.example.yml      -> configs/local_runtime.yml
 ```
 
-Only the example config files are intended to be shared in the repository.
+Only example config files are intended to be shared in the repository.
