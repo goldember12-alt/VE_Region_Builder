@@ -100,6 +100,33 @@ infer_czone_mode <- function(geography, requested_mode = "auto") {
   requested_mode
 }
 
+validate_model_years <- function(base_year, years) {
+  if (is.null(base_year) || length(base_year) != 1 || is.na(base_year) || !nzchar(as.character(base_year))) {
+    stop("region.base_year must be a single numeric year.", call. = FALSE)
+  }
+  if (is.null(years) || length(unlist(years)) == 0) {
+    stop("region.years must contain one or more numeric years.", call. = FALSE)
+  }
+
+  base_year <- suppressWarnings(as.integer(base_year))
+  years <- suppressWarnings(as.integer(unlist(years)))
+
+  if (is.na(base_year)) {
+    stop("region.base_year must be a numeric year.", call. = FALSE)
+  }
+  if (any(is.na(years))) {
+    stop("region.years must contain only numeric years.", call. = FALSE)
+  }
+  if (!(base_year %in% years)) {
+    stop("region.base_year must be included in region.years.", call. = FALSE)
+  }
+
+  list(
+    base_year = base_year,
+    years = unique(years)
+  )
+}
+
 read_region_config <- function(config_path, repo_root = getwd()) {
   check_required_packages()
 
@@ -134,6 +161,10 @@ read_region_config <- function(config_path, repo_root = getwd()) {
     region_name
   region_geo_values <- clean_values(region_geo_values)
   czone_mode <- region$czone_mode %||% config$czone_mode %||% "auto"
+  model_years <- validate_model_years(
+    base_year = region$base_year %||% config$base_year %||% 2024,
+    years = region$years %||% config$years %||% c(region$base_year %||% config$base_year %||% 2024, 2045)
+  )
 
   source_model_dir <- paths$source_model_dir %||% config$source_model_dir
   output_model_dir <- paths$output_model_dir %||% config$output_model_dir
@@ -155,6 +186,8 @@ read_region_config <- function(config_path, repo_root = getwd()) {
     model_region = as.character(model_region),
     scenario = as.character(scenario),
     description = as.character(description),
+    base_year = model_years$base_year,
+    years = model_years$years,
     selected_mareas = selected_mareas,
     region_geo_values = region_geo_values,
     czone_mode = tolower(as.character(czone_mode)),

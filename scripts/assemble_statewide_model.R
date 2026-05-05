@@ -28,6 +28,11 @@ if (!is.na(config$manual_mapping_path)) {
 if (!is.na(config$geography_file) && nzchar(config$geography_file)) {
   message("Explicit geography: ", config$geography_file, " -> ", config$geography_destination)
 }
+if (length(config$explicit_file_injections) > 0) {
+  for (injection in config$explicit_file_injections) {
+    message("Explicit file injection: ", injection$source, " -> ", injection$destination)
+  }
+}
 message("Output model: ", config$output_model_dir)
 
 result <- assemble_statewide_model(config, repo_root)
@@ -39,6 +44,7 @@ message("Expected files: ", summary$expected_count)
 message("Injected files: ", summary$injected_count)
 message("Manual mappings injected: ", summary$manual_mapping_count)
 message("Explicit geography injections: ", summary$explicit_geography_count)
+message("Explicit file injections: ", summary$explicit_file_injection_count)
 message("Template existing files: ", summary$template_existing_count)
 message("Missing files: ", summary$missing_count)
 message("Ambiguous files: ", summary$ambiguous_count)

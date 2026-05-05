@@ -1,8 +1,9 @@
 expected_file,updated_file,approved,notes
-azone_carsvc_characteristics.csv,01_azone_carsvc_characteristic.csv,true,Singular/plural filename drift
-azone_hh_lttrk_prop.csv,07_azone_hh_Ittrk_prop.csv,true,Likely lowercase-l/uppercase-I filename drift
-azone_hh_pop_by_age.csv,08_azone_hh_pop_by_age_year.csv,true,Updated filename includes year suffix
-azone_lttrk_prop.csv,13_azone_Ittrk_prop.csv,true,Likely lowercase-l/uppercase-I filename drift
-azone_prop_sov_dvmt_diverted.csv,16_azone_prop_sov_dvmt_diverted(in).csv,true,Updated filename includes parenthetical suffix
-azone_vehicle_access_times.csv,19_azone_veh_access_times_year.csv,true,Vehicle abbreviated as veh and includes year suffix
-bzone_travel_demand_mgt.csv,28_bzone_travel_demand_management.csv,true,Mgt expanded to management
+azone_carsvc_characteristics.csv,01_azone_carsvc_characteristic.csv,TRUE,Singular/plural filename drift
+azone_hh_lttrk_prop.csv,07_azone_hh_Ittrk_prop.csv,TRUE,Likely lowercase-l/uppercase-I filename drift
+azone_hh_pop_by_age.csv,08_azone_hh_pop_by_age_year.csv,TRUE,Updated filename includes year suffix
+azone_lttrk_prop.csv,13_azone_Ittrk_prop.csv,TRUE,Likely lowercase-l/uppercase-I filename drift
+azone_prop_sov_dvmt_diverted.csv,16_azone_prop_sov_dvmt_diverted(in).csv,TRUE,Updated filename includes parenthetical suffix
+azone_vehicle_access_times.csv,19_azone_veh_access_times_year.csv,TRUE,Vehicle abbreviated as veh and includes year suffix
+bzone_travel_demand_mgt.csv,28_bzone_travel_demand_management.csv,TRUE,Mgt expanded to management
+deflators.csv,deflators.csv,TRUE,defs

@@ -9,4 +9,12 @@ paths:
   output_model_dir: outputs/generated_models/statewide_va_clean
   report_path: outputs/reports/statewide_assembly_report.csv
 
+explicit_file_injections:
+  - source: deflators.csv
+    destination: defs/deflators.csv
+    notes: Injected updated deflators file into defs/deflators.csv.
+
+required_deflator_years:
+  - 2024
+
 overwrite_output: true

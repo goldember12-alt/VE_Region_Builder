@@ -112,6 +112,14 @@ paths:
   output_model_dir: outputs/generated_models/statewide_va_clean
   report_path: outputs/reports/statewide_assembly_report.csv
 
+explicit_file_injections:
+  - source: deflators.csv
+    destination: defs/deflators.csv
+    notes: Injected updated deflators file into defs/deflators.csv.
+
+required_deflator_years:
+  - 2024
+
 overwrite_output: true
 ```
 
@@ -122,6 +130,11 @@ outputs/generated_models/statewide_va_clean
 ```
 
 Then it adds approved or clearly matched corrected CSVs from `updated_csv_dir` to that generated copy.
+
+Statewide assembly also supports explicit file injections for corrected CSVs
+that belong outside `inputs/`. The default config injects updated
+`deflators.csv` into `defs/deflators.csv` and validates that the generated file
+includes required deflator years.
 
 The original template model and statewide CSV folders are not modified.
 

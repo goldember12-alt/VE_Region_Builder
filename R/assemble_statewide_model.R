@@ -6,6 +6,8 @@ statewide_assembly_defaults <- list(
   column_renames_path = NA_character_,
   geography_file = NA_character_,
   geography_destination = NA_character_,
+  explicit_file_injections = list(),
+  required_deflator_years = 2024,
   output_model_dir = "outputs/generated_models/statewide_va_clean",
   report_path = "outputs/reports/statewide_assembly_report.csv",
   overwrite_output = TRUE
@@ -76,6 +78,10 @@ read_statewide_assembly_config <- function(args, repo_root) {
       config$geography_destination <- paths$geography_destination %||%
         yaml_config$geography_destination %||%
         config$geography_destination
+      config$explicit_file_injections <- yaml_config$explicit_file_injections %||%
+        config$explicit_file_injections
+      config$required_deflator_years <- yaml_config$required_deflator_years %||%
+        config$required_deflator_years
       config$output_model_dir <- paths$output_model_dir %||%
         yaml_config$output_model_dir %||%
         config$output_model_dir
@@ -124,9 +130,66 @@ read_statewide_assembly_config <- function(args, repo_root) {
     },
     geography_file = config$geography_file,
     geography_destination = config$geography_destination,
+    explicit_file_injections = config$explicit_file_injections,
+    required_deflator_years = as.integer(unlist(config$required_deflator_years)),
     output_model_dir = normalize_project_path(config$output_model_dir, repo_root),
     report_path = normalize_project_path(config$report_path, repo_root),
     overwrite_output = isTRUE(config$overwrite_output)
+  )
+}
+
+normalize_explicit_file_injections <- function(config) {
+  injections <- config$explicit_file_injections
+  if (is.null(injections)) {
+    injections <- list()
+  }
+  if (!is.list(injections)) {
+    stop("explicit_file_injections must be a list of source/destination mappings.", call. = FALSE)
+  }
+
+  rows <- list()
+  if (!is.na(config$geography_file) && nzchar(config$geography_file)) {
+    rows[[length(rows) + 1]] <- list(
+      source = config$geography_file,
+      destination = config$geography_destination,
+      match_type = "explicit_geography",
+      notes = "Explicit statewide geography injection outside data_sources/filelist.txt."
+    )
+  }
+
+  for (injection_index in seq_along(injections)) {
+    injection <- injections[[injection_index]]
+    if (is.null(injection$source) || is.null(injection$destination)) {
+      stop("Each explicit_file_injections entry must include source and destination.", call. = FALSE)
+    }
+    rows[[length(rows) + 1]] <- list(
+      source = injection$source,
+      destination = injection$destination,
+      match_type = injection$match_type %||% "explicit_file_injection",
+      notes = injection$notes %||% paste0(
+        "Injected updated ",
+        basename(injection$source),
+        " file into ",
+        injection$destination,
+        "."
+      )
+    )
+  }
+
+  if (length(rows) == 0) {
+    return(tibble::tibble(
+      source = character(),
+      destination = character(),
+      match_type = character(),
+      notes = character()
+    ))
+  }
+
+  tibble::tibble(
+    source = vapply(rows, `[[`, character(1), "source"),
+    destination = vapply(rows, `[[`, character(1), "destination"),
+    match_type = vapply(rows, `[[`, character(1), "match_type"),
+    notes = vapply(rows, `[[`, character(1), "notes")
   )
 }
 
@@ -158,6 +221,22 @@ validate_statewide_assembly_paths <- function(config, repo_root) {
     if (!file.exists(geography_source)) {
       stop("Configured geography_file does not exist under updated_csv_dir: ", geography_source, call. = FALSE)
     }
+  }
+  explicit_injections <- normalize_explicit_file_injections(config)
+  for (row_index in seq_len(nrow(explicit_injections))) {
+    validate_relative_file_path(explicit_injections$source[[row_index]], "explicit_file_injections source")
+    validate_relative_file_path(explicit_injections$destination[[row_index]], "explicit_file_injections destination")
+  }
+  duplicate_destinations <- unique(explicit_injections$destination[duplicated(tolower(explicit_injections$destination))])
+  if (length(duplicate_destinations) > 0) {
+    stop(
+      "explicit file injections contain duplicate destinations: ",
+      paste(duplicate_destinations, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  if (any(is.na(config$required_deflator_years))) {
+    stop("required_deflator_years must contain whole years.", call. = FALSE)
   }
 
   outputs_root <- normalizePath(file.path(repo_root, "outputs"), winslash = "/", mustWork = FALSE)
@@ -477,24 +556,51 @@ build_statewide_assembly_plan <- function(expected, updated_csvs, manual_mapping
   dplyr::bind_rows(rows)
 }
 
-append_explicit_geography_injection <- function(plan, config) {
-  if (is.na(config$geography_file) || !nzchar(config$geography_file)) {
+append_explicit_file_injections <- function(plan, config) {
+  explicit_injections <- normalize_explicit_file_injections(config)
+  if (nrow(explicit_injections) == 0) {
     return(plan)
   }
 
-  geography_source <- fs::path(config$updated_csv_dir, config$geography_file)
-  geography_row <- tibble::tibble(
-    order = NA_integer_,
-    expected_file = basename(config$geography_destination),
-    expected_relative_path = config$geography_destination,
-    matched_updated_file = config$geography_file,
-    matched_updated_path = normalizePath(geography_source, winslash = "/", mustWork = TRUE),
-    match_type = "explicit_geography",
-    status = "injected",
-    notes = "Explicit statewide geography injection outside data_sources/filelist.txt."
-  )
+  updated_csvs <- inspect_updated_csvs(config$updated_csv_dir)
+  rows <- vector("list", nrow(explicit_injections))
+  for (row_index in seq_len(nrow(explicit_injections))) {
+    injection <- explicit_injections[row_index, ]
+    candidates <- updated_csvs[
+      updated_csvs$updated_relative_path == injection$source[[1]] |
+        updated_csvs$updated_file == injection$source[[1]],
+      c("updated_relative_path", "updated_path")
+    ]
 
-  dplyr::bind_rows(plan, geography_row)
+    if (nrow(candidates) != 1) {
+      detail <- if (nrow(candidates) == 0) {
+        "no matching source file was found"
+      } else {
+        paste("multiple matching source files were found:", paste(candidates$updated_relative_path, collapse = " | "))
+      }
+      stop(
+        "Explicit file injection for ",
+        injection$source[[1]],
+        " is invalid: ",
+        detail,
+        ".",
+        call. = FALSE
+      )
+    }
+
+    rows[[row_index]] <- tibble::tibble(
+      order = NA_integer_,
+      expected_file = basename(injection$source[[1]]),
+      expected_relative_path = injection$destination[[1]],
+      matched_updated_file = candidates$updated_relative_path[[1]],
+      matched_updated_path = candidates$updated_path[[1]],
+      match_type = injection$match_type[[1]],
+      status = "injected",
+      notes = injection$notes[[1]]
+    )
+  }
+
+  dplyr::bind_rows(plan, dplyr::bind_rows(rows))
 }
 
 copy_template_model <- function(template_model_dir, output_model_dir, overwrite_output) {
@@ -522,6 +628,62 @@ inject_updated_csvs <- function(plan, output_model_dir) {
   nrow(injected)
 }
 
+validate_deflators_file <- function(output_model_dir, required_years) {
+  deflators_path <- fs::path(output_model_dir, "defs", "deflators.csv")
+  if (!file.exists(deflators_path)) {
+    stop("defs/deflators.csv does not exist in generated statewide model.", call. = FALSE)
+  }
+
+  deflators <- readr::read_csv(
+    deflators_path,
+    col_types = readr::cols(.default = readr::col_character()),
+    show_col_types = FALSE,
+    progress = FALSE
+  )
+
+  missing_columns <- setdiff(c("Year", "Value"), names(deflators))
+  if (length(missing_columns) > 0) {
+    stop(
+      "defs/deflators.csv is missing required columns: ",
+      paste(missing_columns, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  years <- trimws(deflators$Year)
+  values <- trimws(deflators$Value)
+  if (any(!nzchar(years))) {
+    stop("defs/deflators.csv contains blank Year values.", call. = FALSE)
+  }
+  if (any(!nzchar(values))) {
+    stop("defs/deflators.csv contains blank Value values.", call. = FALSE)
+  }
+
+  for (required_year in required_years) {
+    if (!as.character(required_year) %in% years) {
+      stop(
+        "defs/deflators.csv does not include required deflator year ",
+        required_year,
+        ".",
+        call. = FALSE
+      )
+    }
+  }
+
+  invisible(TRUE)
+}
+
+validate_injected_deflators <- function(plan, output_model_dir, required_years) {
+  deflators_injected <- plan$status == "injected" &
+    tolower(plan$expected_relative_path) == "defs/deflators.csv"
+
+  if (any(deflators_injected)) {
+    validate_deflators_file(output_model_dir, required_years)
+  }
+
+  invisible(TRUE)
+}
+
 apply_column_renames <- function(column_renames, output_model_dir, report_path) {
   rows <- vector("list", nrow(column_renames))
 
@@ -547,8 +709,28 @@ apply_column_renames <- function(column_renames, output_model_dir, report_path) 
     old_column <- rename$old_column[[1]]
     new_column <- rename$new_column[[1]]
 
+    already_satisfied <- !old_column %in% columns && new_column %in% columns
+    if (already_satisfied) {
+      rows[[row_index]] <- tibble::tibble(
+        file = rename$file[[1]],
+        old_column = old_column,
+        new_column = new_column,
+        approved = rename$approved[[1]],
+        status = "already_satisfied",
+        notes = paste("Target column already exists.", rename$notes[[1]])
+      )
+      next
+    }
     if (!old_column %in% columns) {
-      stop("Column rename old_column is missing in ", rename$file[[1]], ": ", old_column, call. = FALSE)
+      stop(
+        "Column rename old_column is missing in ",
+        rename$file[[1]],
+        " and new_column is not present: ",
+        old_column,
+        " -> ",
+        new_column,
+        call. = FALSE
+      )
     }
     if (new_column %in% columns && old_column != new_column) {
       stop("Column rename new_column already exists in ", rename$file[[1]], ": ", new_column, call. = FALSE)
@@ -591,7 +773,16 @@ append_unused_updated_csvs <- function(plan, updated_csvs) {
   dplyr::bind_rows(plan, unused_rows)
 }
 
+classify_report_severity <- function(status) {
+  dplyr::case_when(
+    status %in% c("missing", "ambiguous", "no_template_location") ~ "review_blocking",
+    status == "unused_updated_csv" ~ "informational",
+    TRUE ~ "ok"
+  )
+}
+
 write_statewide_assembly_report <- function(report, report_path) {
+  report$severity <- classify_report_severity(report$status)
   report_out <- report[, c(
     "order",
     "expected_file",
@@ -599,6 +790,7 @@ write_statewide_assembly_report <- function(report, report_path) {
     "matched_updated_file",
     "match_type",
     "status",
+    "severity",
     "notes"
   )]
 
@@ -617,6 +809,7 @@ summarize_statewide_assembly <- function(report) {
     manual_mapping_count = sum(expected_rows$match_type == "manual_mapping" & expected_rows$status == "injected"),
     template_existing_count = sum(expected_rows$status == "template_existing"),
     explicit_geography_count = sum(report$match_type == "explicit_geography" & report$status == "injected"),
+    explicit_file_injection_count = sum(report$match_type == "explicit_file_injection" & report$status == "injected"),
     missing_count = sum(expected_rows$status == "missing"),
     ambiguous_count = sum(expected_rows$status == "ambiguous"),
     no_template_location_count = sum(expected_rows$status == "no_template_location"),
@@ -634,7 +827,7 @@ assemble_statewide_model <- function(config, repo_root) {
   manual_mappings <- read_manual_file_mappings(config$manual_mapping_path)
   column_renames <- read_column_renames(config$column_renames_path)
   plan <- build_statewide_assembly_plan(expected, updated_csvs, manual_mappings)
-  plan <- append_explicit_geography_injection(plan, config)
+  plan <- append_explicit_file_injections(plan, config)
 
   copy_template_model(
     template_model_dir = config$template_model_dir,
@@ -643,6 +836,7 @@ assemble_statewide_model <- function(config, repo_root) {
   )
 
   inject_updated_csvs(plan, config$output_model_dir)
+  validate_injected_deflators(plan, config$output_model_dir, config$required_deflator_years)
   column_rename_report_path <- file.path(repo_root, "outputs", "reports", "statewide_column_rename_report.csv")
   apply_column_renames(column_renames, config$output_model_dir, column_rename_report_path)
   report <- append_unused_updated_csvs(plan, updated_csvs)

@@ -29,6 +29,10 @@ message("Building region model inputs for: ", config$region_name)
 message("Source model inputs: ", config$source_model_dir)
 message("Output model inputs: ", config$output_model_dir)
 message("Geography file: ", config$geography_file)
+message(
+  "Model years: BaseYear=", config$base_year,
+  "; Years=[", paste(config$years, collapse = ", "), "]"
+)
 
 initialize_region_model_dir(
   source_model_dir = config$source_model_dir,
@@ -40,7 +44,9 @@ cnf_path <- rewrite_visioneval_cnf(
   output_model_dir = config$output_model_dir,
   model_region = config$model_region,
   scenario = config$scenario,
-  description = config$description
+  description = config$description,
+  base_year = config$base_year,
+  years = config$years
 )
 if (!is.na(cnf_path)) {
   message("Updated VisionEval config: ", cnf_path)

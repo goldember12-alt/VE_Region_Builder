@@ -42,16 +42,44 @@ replace_cnf_value <- function(lines, key, value) {
   lines
 }
 
-rewrite_visioneval_cnf <- function(output_model_dir, model_region, scenario, description) {
+rewrite_visioneval_cnf <- function(
+  output_model_dir,
+  model_region,
+  scenario,
+  description,
+  base_year = NULL,
+  years = NULL
+) {
   cnf_path <- fs::path(output_model_dir, "visioneval.cnf")
   if (!file.exists(cnf_path)) {
     return(NA_character_)
+  }
+
+  if (!is.null(base_year) || !is.null(years)) {
+    model_years <- validate_model_years(
+      base_year = base_year %||% 2024,
+      years = years %||% c(base_year %||% 2024, 2045)
+    )
+    base_year <- model_years$base_year
+    years <- model_years$years
   }
 
   lines <- readLines(cnf_path, warn = FALSE)
   lines <- replace_cnf_value(lines, "Region", model_region)
   lines <- replace_cnf_value(lines, "Scenario", scenario)
   lines <- replace_cnf_value(lines, "Description", description)
+
+  if (!is.null(base_year)) {
+    lines <- replace_cnf_value(lines, "BaseYear", as.character(base_year))
+  }
+  if (!is.null(years)) {
+    lines <- replace_cnf_value(
+      lines,
+      "Years",
+      paste0("[ ", paste(as.integer(years), collapse = ", "), " ]")
+    )
+  }
+
   writeLines(lines, cnf_path, useBytes = TRUE)
   cnf_path
 }

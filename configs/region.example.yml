@@ -3,6 +3,10 @@ region:
   model_region: My Region
   scenario: Base
   description: VERSPM for My Region model
+  base_year: 2024
+  years:
+    - 2024
+    - 2045
   mareas:
     - Example Marea
   # Used only for manifest rows declared at geo_level: Region.
