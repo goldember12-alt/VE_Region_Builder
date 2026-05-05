@@ -156,25 +156,84 @@ The generated model folder is a runnable VisionEval model structure. It includes
 
 ## Running a Generated Region Model
 
-VisionEval must be installed separately. On machines where VisionEval is not visible in the normal R library path, configure the runtime with `VE_HOME` or a local ignored config file.
+Before RegionBuilder can run a generated model, it must know where VisionEval is installed. VisionEval is not included in this repository.
 
-Check what RegionBuilder can see:
-
-```powershell
-Rscript scripts/check_visioneval_runtime.R
-```
-
-If needed, copy the local runtime example and edit it for your machine:
+Configure VisionEval with a local file:
 
 ```powershell
 Copy-Item configs/local_runtime.example.yml configs/local_runtime.yml
 ```
 
-Example local runtime config:
+`configs/local_runtime.yml` is ignored by git, so it can contain paths that are specific to your computer.
+
+The correct VisionEval folder is the folder that contains this file:
+
+```text
+VisionEval.R
+```
+
+VisionEval is often installed somewhere like:
+
+```text
+C:/VisionEval
+C:/Users/<your-name>/Documents/VisionEval
+C:/Users/<your-name>/source/VisionEval
+```
+
+To find `VisionEval.R`, search your user folder first:
+
+```powershell
+Get-ChildItem "$env:USERPROFILE" -Recurse -Filter "VisionEval.R" -ErrorAction SilentlyContinue |
+  Select-Object FullName
+```
+
+If that does not find it, search `C:\`. This can take a while:
+
+```powershell
+Get-ChildItem "C:\" -Recurse -Filter "VisionEval.R" -ErrorAction SilentlyContinue |
+  Select-Object FullName
+```
+
+After you find `VisionEval.R`, use the folder that contains it as `ve_home`.
+
+For example, if PowerShell returns:
+
+```text
+C:\VisionEval\VisionEval.R
+```
+
+then `ve_home` is:
+
+```text
+C:/VisionEval
+```
+
+Use forward slashes in YAML paths, even on Windows. Edit `configs/local_runtime.yml`:
 
 ```yaml
-ve_home: "C:/Path/To/VisionEval"
-ve_runtime: "C:/Path/To/VE_RegionBuilder/outputs/generated_models"
+ve_home: "C:/VisionEval"
+ve_runtime: "outputs/generated_models"
+```
+
+`ve_runtime` can stay as `outputs/generated_models` when you run commands from the RegionBuilder repository root.
+
+Check the runtime:
+
+```powershell
+Rscript scripts/check_visioneval_runtime.R
+```
+
+A configured runtime should show:
+
+```text
+VE_HOME exists: TRUE
+VE_HOME/VisionEval.R exists: TRUE
+```
+
+It is okay if this line is `FALSE`:
+
+```text
+Package 'visioneval' visible: FALSE
 ```
 
 Run a generated region model:
@@ -185,12 +244,33 @@ Rscript scripts/run_region_model.R greater_richmond
 
 Replace `greater_richmond` with another generated folder name, such as `hampton_roads` or `wppdc`.
 
-The runner loads VisionEval from `VE_HOME/VisionEval.R` when available, otherwise it uses the `visioneval` package only if that package is installed in the active R library path. Do not call `library(visioneval)` directly unless you have installed VisionEval into the normal R library used by `Rscript`.
-
 After a successful run, outputs are written under:
 
 ```text
 outputs/generated_models/<region_name>/results/
+```
+
+### Runtime Troubleshooting
+
+`VisionEval.R` not found:
+
+VisionEval may not be installed on this machine, or it may be installed somewhere outside your user folder. Try the broader `C:\` search above, or reinstall VisionEval and note the install folder.
+
+`check_visioneval_runtime.R` still says `VE_HOME` is unset:
+
+Make sure you copied `configs/local_runtime.example.yml` to exactly `configs/local_runtime.yml`. Check that the file has a `ve_home:` line and that the path uses forward slashes.
+
+`Package 'visioneval' visible` is `FALSE`:
+
+That is normal for many VisionEval installs. RegionBuilder can still run models if `VE_HOME/VisionEval.R exists` is `TRUE`.
+
+Advanced option:
+
+Instead of `configs/local_runtime.yml`, you can set environment variables in PowerShell. The local config file is usually simpler.
+
+```powershell
+$env:VE_HOME = "C:/VisionEval"
+$env:VE_RUNTIME = "outputs/generated_models"
 ```
 
 ## Manifest Rules

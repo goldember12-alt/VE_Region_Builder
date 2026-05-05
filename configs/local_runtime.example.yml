@@ -1,2 +1,2 @@
 ve_home: "C:/Path/To/VisionEval"
-ve_runtime: "C:/Path/To/VE_RegionBuilder/outputs/generated_models"
+ve_runtime: "outputs/generated_models"

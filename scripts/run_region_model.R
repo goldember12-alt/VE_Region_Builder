@@ -44,6 +44,10 @@ runtime_value <- function(name, config_name, config) {
   as.character(config_value)
 }
 
+is_absolute_path <- function(path) {
+  grepl("^([A-Za-z]:[/\\\\]|[/\\\\]{2}|/)", path)
+}
+
 require_model_contents <- function(model_dir) {
   required <- c("defs", "inputs", "queries", "scripts", "visioneval.cnf")
   missing <- required[!file.exists(file.path(model_dir, required))]
@@ -69,7 +73,12 @@ load_visioneval_runtime <- function(repo_root) {
     }
     if (!nzchar(Sys.getenv("VE_RUNTIME", unset = ""))) {
       runtime_path <- if (nzchar(ve_runtime)) {
-        normalizePath(ve_runtime, winslash = "/", mustWork = FALSE)
+        runtime_input <- if (is_absolute_path(ve_runtime)) {
+          ve_runtime
+        } else {
+          file.path(repo_root, ve_runtime)
+        }
+        normalizePath(runtime_input, winslash = "/", mustWork = FALSE)
       } else {
         normalizePath(file.path(repo_root, "outputs", "generated_models"), winslash = "/", mustWork = TRUE)
       }
