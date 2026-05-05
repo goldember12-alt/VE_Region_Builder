@@ -1,6 +1,6 @@
 statewide_assembly_defaults <- list(
-  template_model_dir = "C:/Users/Jameson.Clements/source/VE_Models/models/SayedMM",
-  updated_csv_dir = "C:/Users/Jameson.Clements/source/VE_Models/models/updatedcsvs",
+  template_model_dir = NA_character_,
+  updated_csv_dir = NA_character_,
   filelist_path = "data_sources/filelist.txt",
   manual_mapping_path = NA_character_,
   column_renames_path = NA_character_,
@@ -10,6 +10,13 @@ statewide_assembly_defaults <- list(
   report_path = "outputs/reports/statewide_assembly_report.csv",
   overwrite_output = TRUE
 )
+
+required_config_path <- function(value, label) {
+  if (is.null(value) || length(value) != 1 || is.na(value) || !nzchar(value)) {
+    stop(label, " must be configured explicitly.", call. = FALSE)
+  }
+  value
+}
 
 strip_order_prefix <- function(value) {
   sub("^[0-9]+_", "", value)
@@ -96,8 +103,14 @@ read_statewide_assembly_config <- function(args, repo_root) {
   }
 
   list(
-    template_model_dir = normalize_project_path(config$template_model_dir, repo_root),
-    updated_csv_dir = normalize_project_path(config$updated_csv_dir, repo_root),
+    template_model_dir = normalize_project_path(
+      required_config_path(config$template_model_dir, "template_model_dir"),
+      repo_root
+    ),
+    updated_csv_dir = normalize_project_path(
+      required_config_path(config$updated_csv_dir, "updated_csv_dir"),
+      repo_root
+    ),
     filelist_path = normalize_project_path(config$filelist_path, repo_root),
     manual_mapping_path = if (is.na(config$manual_mapping_path) || !nzchar(config$manual_mapping_path)) {
       NA_character_

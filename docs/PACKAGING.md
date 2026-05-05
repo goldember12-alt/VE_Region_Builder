@@ -179,15 +179,17 @@ Run these checks from the repository root before creating a ZIP, release archive
 
 ```powershell
 git status --short
-rg "C:/Users/Jameson.Clements|VisionEval-dev|VE_Models|VE_Models" .
+Rscript scripts/run_fixture_smoke.R
+rg "C:/Users/|VisionEval-dev|VE_Models" .
 Get-ChildItem outputs -Recurse
 ```
 
 Expected result:
 
 - `git status --short` should show only intentional packaging changes.
+- The fixture smoke workflow should complete and write a validation report under `outputs/reports/`.
 - The path search should find no private/local paths in distributable configs or docs, except clearly marked examples.
-- `outputs/` should be empty or contain only ignored generated files and optional `.gitkeep` placeholders.
+- After reviewing the smoke output, clean runtime files from `outputs/` before creating an archive. `outputs/` should be empty or contain only ignored generated files and optional `.gitkeep` placeholders.
 
 Also confirm:
 
