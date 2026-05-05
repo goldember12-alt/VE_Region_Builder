@@ -194,7 +194,7 @@ Get-ChildItem "C:\" -Recurse -Filter "VisionEval.R" -ErrorAction SilentlyContinu
   Select-Object FullName
 ```
 
-After you find `VisionEval.R`, use the folder that contains it as `ve_home`.
+The PowerShell search returns the full path to the `VisionEval.R` file. `ve_home` must be the folder that contains `VisionEval.R`, not the file itself. Do not include `/VisionEval.R` at the end of `ve_home`.
 
 For example, if PowerShell returns:
 
@@ -208,10 +208,22 @@ then `ve_home` is:
 C:/VisionEval
 ```
 
+Another example:
+
+```text
+C:\...\runtime\VisionEval.R
+```
+
+becomes:
+
+```yaml
+ve_home: "C:/.../runtime"
+```
+
 Use forward slashes in YAML paths, even on Windows. Edit `configs/local_runtime.yml`:
 
 ```yaml
-ve_home: "C:/VisionEval"
+ve_home: "C:/Path/To/Folder/Containing/VisionEval.R"
 ve_runtime: "outputs/generated_models"
 ```
 
@@ -228,6 +240,7 @@ A configured runtime should show:
 ```text
 VE_HOME exists: TRUE
 VE_HOME/VisionEval.R exists: TRUE
+VisionEval startup check: TRUE
 ```
 
 It is okay if this line is `FALSE`:
@@ -262,7 +275,28 @@ Make sure you copied `configs/local_runtime.example.yml` to exactly `configs/loc
 
 `Package 'visioneval' visible` is `FALSE`:
 
-That is normal for many VisionEval installs. RegionBuilder can still run models if `VE_HOME/VisionEval.R exists` is `TRUE`.
+That is normal for many VisionEval installs. RegionBuilder can still run models if `VE_HOME/VisionEval.R exists` and `VisionEval startup check` are both `TRUE`.
+
+`Incorrect R version for this VisionEval installation`:
+
+RegionBuilder uses whichever `Rscript` command you run. If plain `Rscript` points to R 4.5.2, but your VisionEval runtime was built for R 4.4.2, the runtime check or model run will fail.
+
+Use the matching Rscript explicitly, for example:
+
+```powershell
+& "C:/Path/To/R-4.4.2/bin/Rscript.exe" scripts/check_visioneval_runtime.R
+& "C:/Path/To/R-4.4.2/bin/Rscript.exe" scripts/run_region_model.R greater_richmond
+```
+
+Or point `ve_home` to a VisionEval runtime built for the active R version reported by:
+
+```powershell
+Rscript --version
+```
+
+`incomplete final line found on configs/local_runtime.yml`:
+
+This warning is harmless. Open `configs/local_runtime.yml`, put your cursor at the end of the file, press Enter once, and save it so the YAML file ends with a final blank line.
 
 Advanced option:
 

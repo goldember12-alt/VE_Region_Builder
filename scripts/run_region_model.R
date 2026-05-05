@@ -48,6 +48,10 @@ is_absolute_path <- function(path) {
   grepl("^([A-Za-z]:[/\\\\]|[/\\\\]{2}|/)", path)
 }
 
+path_ends_with_startup_file <- function(path) {
+  grepl("(^|[/\\\\])VisionEval\\.R$", path, ignore.case = TRUE)
+}
+
 require_model_contents <- function(model_dir) {
   required <- c("defs", "inputs", "queries", "scripts", "visioneval.cnf")
   missing <- required[!file.exists(file.path(model_dir, required))]
@@ -65,6 +69,14 @@ load_visioneval_runtime <- function(repo_root) {
   local_config <- read_local_runtime_config(repo_root)
   ve_home <- runtime_value("VE_HOME", "ve_home", local_config)
   ve_runtime <- runtime_value("VE_RUNTIME", "ve_runtime", local_config)
+  if (nzchar(ve_home) && path_ends_with_startup_file(ve_home)) {
+    stop(
+      "VE_HOME appears to point to the VisionEval.R file. ",
+      "Set VE_HOME to its containing folder instead. Suggested value: ",
+      gsub("\\\\", "/", dirname(ve_home)),
+      call. = FALSE
+    )
+  }
   startup_file <- if (nzchar(ve_home)) file.path(ve_home, "VisionEval.R") else ""
 
   if (nzchar(startup_file) && file.exists(startup_file)) {

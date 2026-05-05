@@ -1,2 +1,2 @@
-ve_home: "C:/Path/To/VisionEval"
+ve_home: "C:/Path/To/Folder/Containing/VisionEval.R"
 ve_runtime: "outputs/generated_models"

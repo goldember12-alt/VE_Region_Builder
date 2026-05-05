@@ -38,17 +38,106 @@ runtime_value <- function(name, config_name, config) {
   as.character(config_value)
 }
 
+is_absolute_path <- function(path) {
+  grepl("^([A-Za-z]:[/\\\\]|[/\\\\]{2}|/)", path)
+}
+
 print_item <- function(label, value) {
   cat(label, ": ", value, "\n", sep = "")
 }
 
+path_ends_with_startup_file <- function(path) {
+  grepl("(^|[/\\\\])VisionEval\\.R$", path, ignore.case = TRUE)
+}
+
+active_r_version <- function() {
+  paste(R.version$major, R.version$minor, sep = ".")
+}
+
+runtime_path_value <- function(repo_root, ve_runtime) {
+  if (!nzchar(ve_runtime)) {
+    return(normalizePath(file.path(repo_root, "outputs", "generated_models"), winslash = "/", mustWork = TRUE))
+  }
+  runtime_input <- if (is_absolute_path(ve_runtime)) {
+    ve_runtime
+  } else {
+    file.path(repo_root, ve_runtime)
+  }
+  normalizePath(runtime_input, winslash = "/", mustWork = FALSE)
+}
+
+expected_r_from_runtime <- function(ve_home) {
+  version_file <- file.path(ve_home, "r.version")
+  if (file.exists(version_file)) {
+    lines <- readLines(version_file, warn = FALSE)
+    match <- sub("^that\\.R\\s*:\\s*", "", grep("^that\\.R\\s*:", lines, value = TRUE))
+    if (length(match) > 0 && nzchar(match[[1]])) {
+      return(match[[1]])
+    }
+  }
+
+  normalized <- gsub("\\\\", "/", ve_home)
+  match <- regmatches(normalized, regexpr("(^|/)[0-9]+\\.[0-9]+\\.[0-9]+/runtime/?$", normalized))
+  if (length(match) > 0 && nzchar(match)) {
+    return(sub("^/", "", sub("/runtime/?$", "", match)))
+  }
+
+  NA_character_
+}
+
+check_runtime_startup <- function(repo_root, ve_home, ve_runtime) {
+  expected_r <- expected_r_from_runtime(ve_home)
+  this_r <- active_r_version()
+
+  if (!is.na(expected_r) && expected_r != this_r) {
+    stop(
+      "VisionEval runtime found, but it expects R ", expected_r,
+      " and your active Rscript is R ", this_r, ". ",
+      "Run with the matching Rscript, for example R-", expected_r,
+      "/bin/Rscript.exe, or point ve_home to a VisionEval runtime built for R ",
+      this_r, ".",
+      call. = FALSE
+    )
+  }
+
+  if (!nzchar(Sys.getenv("VE_HOME", unset = ""))) {
+    Sys.setenv(VE_HOME = normalizePath(ve_home, winslash = "/", mustWork = TRUE))
+  }
+  if (!nzchar(Sys.getenv("VE_RUNTIME", unset = ""))) {
+    Sys.setenv(VE_RUNTIME = runtime_path_value(repo_root, ve_runtime))
+  }
+
+  startup_file <- file.path(ve_home, "VisionEval.R")
+  old_wd <- setwd(normalizePath(ve_home, winslash = "/", mustWork = TRUE))
+  on.exit(setwd(old_wd), add = TRUE)
+  tryCatch(
+    source(startup_file),
+    error = function(error) {
+      stop(
+        "VisionEval runtime was found, but startup failed. ",
+        conditionMessage(error),
+        call. = FALSE
+      )
+    }
+  )
+
+  TRUE
+}
+
 repo_root <- find_repo_root()
 local_config <- read_local_runtime_config(repo_root)
-ve_home <- runtime_value("VE_HOME", "ve_home", local_config)
+ve_home_raw <- runtime_value("VE_HOME", "ve_home", local_config)
 ve_runtime <- runtime_value("VE_RUNTIME", "ve_runtime", local_config)
-ve_home_exists <- nzchar(ve_home) && dir.exists(ve_home)
-startup_file <- if (nzchar(ve_home)) file.path(ve_home, "VisionEval.R") else ""
+ve_home_points_to_file <- nzchar(ve_home_raw) && path_ends_with_startup_file(ve_home_raw)
+ve_home_interpreted <- if (ve_home_points_to_file) {
+  dirname(ve_home_raw)
+} else {
+  ve_home_raw
+}
+ve_home_exists <- nzchar(ve_home_interpreted) && dir.exists(ve_home_interpreted)
+startup_file <- if (nzchar(ve_home_interpreted)) file.path(ve_home_interpreted, "VisionEval.R") else ""
 startup_file_exists <- nzchar(startup_file) && file.exists(startup_file)
+expected_r <- if (ve_home_exists) expected_r_from_runtime(ve_home_interpreted) else NA_character_
 package_visible <- requireNamespace("visioneval", quietly = TRUE)
 generated_models_exists <- dir.exists(file.path(repo_root, "outputs", "generated_models"))
 
@@ -57,12 +146,24 @@ print_item("R version", R.version.string)
 print_item("Working directory", normalizePath(getwd(), winslash = "/", mustWork = TRUE))
 print_item("Repo root", repo_root)
 print_item(".libPaths()", paste(.libPaths(), collapse = " | "))
-print_item("VE_HOME", if (nzchar(ve_home)) ve_home else "<unset>")
+print_item("VE_HOME raw value", if (nzchar(ve_home_raw)) ve_home_raw else "<unset>")
+print_item("VE_HOME interpreted path", if (nzchar(ve_home_interpreted)) ve_home_interpreted else "<unset>")
 print_item("VE_RUNTIME", if (nzchar(ve_runtime)) ve_runtime else "<unset>")
 print_item("VE_HOME exists", ve_home_exists)
 print_item("VE_HOME/VisionEval.R exists", startup_file_exists)
+print_item("VisionEval expected R version", if (!is.na(expected_r)) expected_r else "<unknown>")
+print_item("Active Rscript version", active_r_version())
 print_item("Package 'visioneval' visible", package_visible)
 print_item("outputs/generated_models exists", generated_models_exists)
+
+if (ve_home_points_to_file) {
+  stop(
+    "VE_HOME appears to point to the VisionEval.R file. ",
+    "Set VE_HOME to its containing folder instead. Suggested value: ",
+    gsub("\\\\", "/", dirname(ve_home_raw)),
+    call. = FALSE
+  )
+}
 
 if (!package_visible && !startup_file_exists) {
   stop(
@@ -72,6 +173,11 @@ if (!package_visible && !startup_file_exists) {
     "and set ve_home there.",
     call. = FALSE
   )
+}
+
+if (startup_file_exists) {
+  check_runtime_startup(repo_root, ve_home_interpreted, ve_runtime)
+  print_item("VisionEval startup check", TRUE)
 }
 
 cat("VisionEval runtime check passed.\n")
