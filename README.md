@@ -290,7 +290,28 @@ Get-ChildItem "C:/Program Files/R" -Recurse -Filter "Rscript.exe" -ErrorAction S
 
 Choose the `Rscript.exe` under the R version expected by your VisionEval runtime, such as `R-4.4.2`.
 
+The expected sequence is:
+
+1. Find installed R versions.
+2. Find `Rscript.exe` files.
+3. Pick the `Rscript.exe` under the R version expected by VisionEval.
+4. Set `VE_RSCRIPT`.
+5. Run `scripts\check_visioneval_runtime.cmd`.
+6. Run `scripts\run_region_model.cmd greater_richmond`.
+
 For Windows users, the `.cmd` wrappers are the recommended way to use a matching Rscript without changing PowerShell execution policy. Set `VE_RSCRIPT`, then run:
+
+```powershell
+$env:VE_RSCRIPT = "$env:LOCALAPPDATA\Programs\R\R-4.4.2\bin\Rscript.exe"
+```
+
+Some R installations put `Rscript.exe` under `bin\x64`:
+
+```powershell
+$env:VE_RSCRIPT = "$env:LOCALAPPDATA\Programs\R\R-4.4.2\bin\x64\Rscript.exe"
+```
+
+Then run:
 
 ```cmd
 scripts\check_visioneval_runtime.cmd
@@ -312,25 +333,6 @@ Direct Rscript commands still work if you prefer them:
 ```
 
 ### Optional: Save the Matching Rscript Path
-
-For the current PowerShell session:
-
-```powershell
-$env:VE_RSCRIPT = "$env:LOCALAPPDATA\Programs\R\R-4.4.2\bin\Rscript.exe"
-```
-
-Some R installations put `Rscript.exe` under `bin\x64`:
-
-```powershell
-$env:VE_RSCRIPT = "$env:LOCALAPPDATA\Programs\R\R-4.4.2\bin\x64\Rscript.exe"
-```
-
-Then run the `.cmd` wrappers:
-
-```cmd
-scripts\check_visioneval_runtime.cmd
-scripts\run_region_model.cmd greater_richmond
-```
 
 To save `VE_RSCRIPT` for your Windows user:
 
