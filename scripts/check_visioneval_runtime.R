@@ -17,12 +17,57 @@ find_repo_root <- function(start_dir = getwd()) {
 
 read_local_runtime_config <- function(repo_root) {
   config_path <- file.path(repo_root, "configs", "local_runtime.yml")
-  if (!file.exists(config_path) || !requireNamespace("yaml", quietly = TRUE)) {
+  if (!file.exists(config_path)) {
     return(list())
+  }
+
+  if (!requireNamespace("yaml", quietly = TRUE)) {
+    message("configs/local_runtime.yml exists, but the active R library does not have package 'yaml' installed.")
+    message("Using a simple fallback parser for ve_home, ve_runtime, and rscript.")
+    message("For full YAML support, install it with:")
+    message('  install.packages("yaml")')
+    message("or set VE_HOME and VE_RUNTIME as environment variables.")
+
+    config <- parse_simple_runtime_config(config_path)
+    if (length(config) == 0) {
+      stop(
+        "configs/local_runtime.yml exists, but the active R library does not have package 'yaml' installed.\n",
+        "Install it with:\n",
+        '  install.packages("yaml")\n',
+        "or set VE_HOME and VE_RUNTIME as environment variables.",
+        call. = FALSE
+      )
+    }
+    return(config)
   }
 
   config <- yaml::read_yaml(config_path)
   if (is.null(config)) list() else config
+}
+
+parse_simple_runtime_config <- function(config_path) {
+  lines <- readLines(config_path, warn = FALSE)
+  config <- list()
+  for (line in lines) {
+    line <- sub("\\s+#.*$", "", line)
+    if (!nzchar(trimws(line))) {
+      next
+    }
+
+    match <- regexec("^\\s*(ve_home|ve_runtime|rscript)\\s*:\\s*(.*?)\\s*$", line, perl = TRUE)
+    parts <- regmatches(line, match)[[1]]
+    if (length(parts) != 3) {
+      next
+    }
+
+    value <- trimws(parts[[3]])
+    if ((startsWith(value, "\"") && endsWith(value, "\"")) ||
+        (startsWith(value, "'") && endsWith(value, "'"))) {
+      value <- substr(value, 2, nchar(value) - 1)
+    }
+    config[[parts[[2]]]] <- value
+  }
+  config
 }
 
 runtime_value <- function(name, config_name, config) {
