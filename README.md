@@ -1,17 +1,20 @@
 # VE Region Builder
 
-VE Region Builder is a standalone R helper project for creating region-specific VisionEval model input folders from a clean statewide VisionEval input model.
+VE Region Builder is a standalone R project for creating region-specific VisionEval input folders from a statewide VisionEval model assembled from a template model and corrected statewide CSV inputs.
 
-The project does not modify VisionEval source code, source statewide inputs, template model inputs, or existing model repositories. All generated model folders, reports, and logs are written under this repository's `outputs/` folder.
+The project is non-destructive. It does not modify VisionEval source code, statewide source inputs, template model folders, or existing model repositories. It writes generated models, reports, and logs under this repository’s `outputs/` folder.
 
-## What It Does
+## What This Project Does
 
-The workflow has two stages:
+The workflow has two main steps.
 
-1. Assemble a clean statewide source model from a template VisionEval model and corrected statewide CSV inputs.
-2. Build a regional VisionEval input folder by filtering statewide files to selected Mareas.
+First, it creates a statewide source model. It copies a template VisionEval model and adds corrected statewide CSV inputs to the generated copy.
 
-Regional membership is derived from the statewide geography crosswalk. The selected Mareas determine the allowed Mareas, and the allowed Azones, Bzones, and Czones are derived from the filtered geography file. The tool does not infer input geography automatically; file handling is controlled by `metadata/input_manifest.csv`.
+Second, it creates a regional model folder. It filters the statewide model inputs to a selected set of Mareas and writes a region-specific VisionEval input folder.
+
+The statewide geography file defines which zones belong to each region. You select the Mareas, and the workflow finds the related Azones, Bzones, and Czones from that file.
+
+File handling is controlled by `metadata/input_manifest.csv`. The workflow does not guess how each file should be filtered or copied.
 
 ## Requirements
 
@@ -21,7 +24,7 @@ Install R and these R packages:
 install.packages(c("readr", "dplyr", "yaml", "fs", "tibble"))
 ```
 
-Run commands from the repository root.
+Run all commands from the repository root.
 
 ## Repository Layout
 
@@ -29,39 +32,43 @@ Run commands from the repository root.
 R/                         Reusable R functions
 scripts/                   Command-line entry points
 configs/                   Example configs to copy before editing
-metadata/                  Manifest and approved mapping metadata
-data_sources/filelist.txt  Expected statewide input file contract
+metadata/                  Input manifest and approved mapping metadata
+data_sources/filelist.txt  Expected statewide input file list
 tests/fixtures/            Small fixture model for smoke testing
-outputs/                   Runtime output location, ignored by git
-docs/PACKAGING.md          Release and packaging checklist
+outputs/                   Runtime outputs; ignored by git
 ```
 
 ## Quick Smoke Test
 
-Run the fixture smoke workflow to confirm the tool works without private or external data:
+Run the fixture smoke test to confirm that the project works without private or external data:
 
 ```powershell
 Rscript scripts/run_fixture_smoke.R
 ```
 
-Expected output:
+Expected outputs:
 
 ```text
 outputs/generated_models/fixture_smoke/
 outputs/reports/fixture_smoke_validation.csv
 ```
 
-The smoke workflow uses `tests/fixtures/statewide_model` and `metadata/input_manifest.csv`.
+The smoke test uses:
 
-## Configure Statewide Assembly
+```text
+tests/fixtures/statewide_model
+metadata/input_manifest.csv
+```
 
-Copy the example config and edit the copy:
+## Step 1: Configure Statewide Assembly
+
+Copy the example statewide assembly config:
 
 ```powershell
 Copy-Item configs/statewide_assembly.example.yml configs/statewide_assembly.yml
 ```
 
-Set these paths in `configs/statewide_assembly.yml`:
+Edit `configs/statewide_assembly.yml`:
 
 ```yaml
 paths:
@@ -78,32 +85,40 @@ paths:
 overwrite_output: true
 ```
 
-`template_model_dir` is copied into `outputs/generated_models/statewide_va_clean`. Approved or unambiguous corrected CSVs from `updated_csv_dir` are injected into that generated copy. Source folders are not modified.
+The assembly step copies `template_model_dir` into:
 
-Run assembly:
+```text
+outputs/generated_models/statewide_va_clean
+```
+
+Then it adds approved or clearly matched corrected CSVs from `updated_csv_dir` to that generated copy.
+
+The original template model and statewide CSV folders are not modified.
+
+Run the assembly step:
 
 ```powershell
 Rscript scripts/assemble_statewide_model.R configs/statewide_assembly.yml
 ```
 
-Review:
+Review the reports:
 
 ```text
 outputs/reports/statewide_assembly_report.csv
 outputs/reports/statewide_column_rename_report.csv
 ```
 
-If the report shows missing, ambiguous, or unmapped files, resolve those before using the generated statewide model as a regional source.
+Fix any missing, ambiguous, or unmapped files before using the generated statewide model for regional builds.
 
-## Configure A Region Build
+## Step 2: Configure a Regional Build
 
-Copy the region example and edit the copy:
+Copy the region example config:
 
 ```powershell
 Copy-Item configs/region.example.yml configs/my_region.yml
 ```
 
-Example:
+Edit `configs/my_region.yml`:
 
 ```yaml
 region:
@@ -127,7 +142,7 @@ Run the regional build:
 Rscript scripts/build_region_model.R configs/my_region.yml
 ```
 
-Expected output:
+Expected outputs:
 
 ```text
 outputs/generated_models/my_region/
@@ -136,29 +151,35 @@ outputs/reports/my_region_validation.csv
 
 ## Manifest Rules
 
-`metadata/input_manifest.csv` is the authority for file handling. It must contain:
+`metadata/input_manifest.csv` tells the workflow how to handle each input file.
+
+It must contain these columns:
 
 ```text
 file,geo_level,action,notes
 ```
 
-Allowed `geo_level` values:
+Allowed `geo_level` values are:
 
 ```text
 Region, Marea, Azone, Bzone, Czone
 ```
 
-Allowed `action` values:
+Allowed `action` values are:
 
-- `filter_geo`: require a `Geo` column and keep rows whose `Geo` value is allowed for the declared geography level.
-- `copy`: copy the file unchanged and validate any `Geo` values present.
-- `review`: skip the file and record it in the validation report.
+| Action | Meaning |
+|---|---|
+| `filter_geo` | The file must have a `Geo` column. The workflow keeps only rows whose `Geo` value belongs to the allowed geography list for that file. |
+| `copy` | The workflow copies the file unchanged. If the file has `Geo` values, it checks them during validation. |
+| `review` | The workflow skips the file and records it in the validation report for manual review. |
 
-The generated geography file is written directly from the filtered statewide geography crosswalk and should not be listed as a copied manifest row.
+The generated geography file is written from the filtered statewide geography file. It should not be listed as a copied manifest row.
 
-## Safety Boundaries
+## Generated Files and Local Configs
 
-Generated content must stay under:
+This repository contains the code, metadata, and example configs needed to run the workflow. It does not include statewide input data, template VisionEval models, generated regional models, or VisionEval run outputs.
+
+Generated files are written under `outputs/`:
 
 ```text
 outputs/generated_models/
@@ -166,24 +187,11 @@ outputs/reports/
 outputs/logs/
 ```
 
-Machine-specific configs such as `configs/statewide_assembly.yml` and `configs/my_region.yml` are ignored by git. Only `configs/*.example.yml` should be distributed.
+Local config files are excluded from git because they contain machine-specific paths. To run the workflow, copy the example configs and edit the copies for your local setup:
 
-Do not package source statewide inputs, template model inputs, generated model folders, VisionEval run results, local scratch files, or local path files.
-
-## Packaging Check
-
-Before creating a zip, release archive, or public clone:
-
-```powershell
-git status --short
-rg "C:/Users/|VisionEval-dev|VE_Models" .
-Get-ChildItem outputs -Recurse
+```text
+configs/statewide_assembly.example.yml  ->  configs/statewide_assembly.yml
+configs/region.example.yml              ->  configs/my_region.yml
 ```
 
-Expected:
-
-- `git status --short` shows only intentional source, metadata, config example, or documentation changes.
-- Local path matches appear only in clearly marked internal instructions or local ignored configs, not distributable code defaults.
-- `outputs/` is empty or contains only ignored runtime output that will be excluded from the archive.
-
-See `docs/PACKAGING.md` for the fuller release checklist.
+Only the example config files are intended to be shared in the repository.
