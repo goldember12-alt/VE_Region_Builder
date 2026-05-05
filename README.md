@@ -202,7 +202,12 @@ paths:
   source_model_dir: outputs/generated_models/statewide_va_clean
   output_model_dir: outputs/generated_models/my_region
   validation_report: outputs/reports/my_region_validation.csv
+
+  # For real Virginia statewide builds, replace this with the manifest
+  # supplied for your statewide input package.
   manifest: metadata/input_manifest.csv
+
+  # Path to the VisionEval geography definition file inside the source model.
   geography_file: defs/geo.csv
 ```
 

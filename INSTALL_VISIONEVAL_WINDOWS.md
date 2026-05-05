@@ -35,7 +35,7 @@ In the R console, run:
 source(ve.url <- "https://visioneval.github.io/assets/install/VE4-install.R")
 ```
 
-When prompted, choose the pre-built release installation path.
+When prompted, choose the pre-built release option.
 
 Choose a `VE_HOME` location. The installer may suggest a default location under
 Documents, but a simple dedicated folder is usually easier to maintain.
