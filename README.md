@@ -225,15 +225,19 @@ Use forward slashes in YAML paths, even on Windows. Edit `configs/local_runtime.
 ```yaml
 ve_home: "C:/Path/To/Folder/Containing/VisionEval.R"
 ve_runtime: "outputs/generated_models"
+# Optional: used by PowerShell wrappers when VisionEval needs a specific R version.
+rscript: "C:/Path/To/R-4.4.2/bin/Rscript.exe"
 ```
 
 `ve_runtime` can stay as `outputs/generated_models` when you run commands from the RegionBuilder repository root.
 
 Check the runtime:
 
-```powershell
-Rscript scripts/check_visioneval_runtime.R
+```cmd
+scripts\check_visioneval_runtime.cmd
 ```
+
+The `.cmd` wrappers are recommended on Windows because they avoid common PowerShell script execution-policy blocks. They use `VE_RSCRIPT` when it is set; otherwise they use plain `Rscript` from `PATH`.
 
 A configured runtime should show:
 
@@ -251,8 +255,8 @@ Package 'visioneval' visible: FALSE
 
 Run a generated region model:
 
-```powershell
-Rscript scripts/run_region_model.R greater_richmond
+```cmd
+scripts\run_region_model.cmd greater_richmond
 ```
 
 Replace `greater_richmond` with another generated folder name, such as `hampton_roads` or `wppdc`.
@@ -262,6 +266,83 @@ After a successful run, outputs are written under:
 ```text
 outputs/generated_models/<region_name>/results/
 ```
+
+### Find the Matching Rscript
+
+RegionBuilder uses the Rscript executable that launches the script. If VisionEval was built for R 4.4.2, use the `Rscript.exe` from an R 4.4.2 installation.
+
+List installed R versions in common Windows locations:
+
+```powershell
+Get-ChildItem "$env:LOCALAPPDATA\Programs\R" -Directory
+Get-ChildItem "C:/Program Files/R" -Directory -ErrorAction SilentlyContinue
+```
+
+Find available `Rscript.exe` files:
+
+```powershell
+Get-ChildItem "$env:LOCALAPPDATA\Programs\R" -Recurse -Filter "Rscript.exe" -ErrorAction SilentlyContinue |
+  Select-Object FullName
+
+Get-ChildItem "C:/Program Files/R" -Recurse -Filter "Rscript.exe" -ErrorAction SilentlyContinue |
+  Select-Object FullName
+```
+
+Choose the `Rscript.exe` under the R version expected by your VisionEval runtime, such as `R-4.4.2`.
+
+For Windows users, the `.cmd` wrappers are the recommended way to use a matching Rscript without changing PowerShell execution policy. Set `VE_RSCRIPT`, then run:
+
+```cmd
+scripts\check_visioneval_runtime.cmd
+scripts\run_region_model.cmd greater_richmond
+```
+
+If you use the PowerShell wrappers, they can also read `rscript:` from `configs/local_runtime.yml`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\check_visioneval_runtime.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\run_region_model.ps1 greater_richmond
+```
+
+Direct Rscript commands still work if you prefer them:
+
+```powershell
+& "C:/Path/To/R-4.4.2/bin/Rscript.exe" scripts/check_visioneval_runtime.R
+& "C:/Path/To/R-4.4.2/bin/Rscript.exe" scripts/run_region_model.R greater_richmond
+```
+
+### Optional: Save the Matching Rscript Path
+
+For the current PowerShell session:
+
+```powershell
+$env:VE_RSCRIPT = "$env:LOCALAPPDATA\Programs\R\R-4.4.2\bin\Rscript.exe"
+```
+
+Some R installations put `Rscript.exe` under `bin\x64`:
+
+```powershell
+$env:VE_RSCRIPT = "$env:LOCALAPPDATA\Programs\R\R-4.4.2\bin\x64\Rscript.exe"
+```
+
+Then run the `.cmd` wrappers:
+
+```cmd
+scripts\check_visioneval_runtime.cmd
+scripts\run_region_model.cmd greater_richmond
+```
+
+To save `VE_RSCRIPT` for your Windows user:
+
+```powershell
+[Environment]::SetEnvironmentVariable(
+  "VE_RSCRIPT",
+  "$env:LOCALAPPDATA\Programs\R\R-4.4.2\bin\Rscript.exe",
+  "User"
+)
+```
+
+Close and reopen PowerShell after setting it permanently.
 
 ### Runtime Troubleshooting
 
@@ -283,12 +364,12 @@ RegionBuilder uses whichever `Rscript` command you run. If plain `Rscript` point
 
 Use the matching Rscript explicitly, for example:
 
-```powershell
-& "C:/Path/To/R-4.4.2/bin/Rscript.exe" scripts/check_visioneval_runtime.R
-& "C:/Path/To/R-4.4.2/bin/Rscript.exe" scripts/run_region_model.R greater_richmond
+```cmd
+scripts\check_visioneval_runtime.cmd
+scripts\run_region_model.cmd greater_richmond
 ```
 
-Or point `ve_home` to a VisionEval runtime built for the active R version reported by:
+The `.cmd` wrappers use `VE_RSCRIPT` first, then plain `Rscript` from `PATH`. The optional `.ps1` wrappers also support `configs/local_runtime.yml` field `rscript:`. You can also point `ve_home` to a VisionEval runtime built for the active R version reported by:
 
 ```powershell
 Rscript --version
