@@ -6,9 +6,13 @@ region:
   mareas:
     - Example Marea
   # Used only for manifest rows declared at geo_level: Region.
-  # Marea/Azone/Bzone/Czone values are derived from paths.geography_file.
+  # Marea/Azone/Bzone values are derived from paths.geography_file.
   region_geo_values:
     - Virginia
+  # auto infers absent when the source geography has no meaningful Czone values.
+  # In absent mode, RegionBuilder writes VisionEval's required Czone column with
+  # literal NA values to represent unspecified Czones.
+  czone_mode: auto
 
 paths:
   source_model_dir: outputs/generated_models/statewide_va_clean

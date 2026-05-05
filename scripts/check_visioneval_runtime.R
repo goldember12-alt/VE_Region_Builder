@@ -169,6 +169,26 @@ check_runtime_startup <- function(repo_root, ve_home, ve_runtime) {
   TRUE
 }
 
+load_runtime_package <- function() {
+  tryCatch(
+    {
+      library(visioneval)
+      TRUE
+    },
+    error = function(error) {
+      stop(
+        "Package 'visioneval' is visible, but loading it failed. ",
+        conditionMessage(error),
+        call. = FALSE
+      )
+    }
+  )
+}
+
+function_available <- function(name) {
+  exists(name, mode = "function", inherits = TRUE)
+}
+
 repo_root <- find_repo_root()
 local_config <- read_local_runtime_config(repo_root)
 ve_home_raw <- runtime_value("VE_HOME", "ve_home", local_config)
@@ -223,6 +243,23 @@ if (!package_visible && !startup_file_exists) {
 if (startup_file_exists) {
   check_runtime_startup(repo_root, ve_home_interpreted, ve_runtime)
   print_item("VisionEval startup check", TRUE)
+} else if (package_visible) {
+  load_runtime_package()
+}
+
+open_model_available <- function_available("openModel")
+print_item("openModel available", open_model_available)
+print_item("installModel available", function_available("installModel"))
+print_item("initializeModel available", function_available("initializeModel"))
+print_item("runModule available", function_available("runModule"))
+
+if (!open_model_available) {
+  stop(
+    "VisionEval runtime loaded, but openModel() is not available. ",
+    "This runner expects the VE-3 VisionEval API. ",
+    "Check that VE_HOME points to a compatible VisionEval runtime.",
+    call. = FALSE
+  )
 }
 
 cat("VisionEval runtime check passed.\n")

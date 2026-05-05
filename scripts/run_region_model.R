@@ -104,10 +104,9 @@ require_model_contents <- function(model_dir) {
   }
 }
 
-load_visioneval_runtime <- function(repo_root) {
+load_visioneval_runtime <- function(repo_root, generated_models_dir) {
   local_config <- read_local_runtime_config(repo_root)
   ve_home <- runtime_value("VE_HOME", "ve_home", local_config)
-  ve_runtime <- runtime_value("VE_RUNTIME", "ve_runtime", local_config)
   if (nzchar(ve_home) && path_ends_with_startup_file(ve_home)) {
     stop(
       "VE_HOME appears to point to the VisionEval.R file. ",
@@ -118,22 +117,11 @@ load_visioneval_runtime <- function(repo_root) {
   }
   startup_file <- if (nzchar(ve_home)) file.path(ve_home, "VisionEval.R") else ""
 
+  Sys.setenv(VE_RUNTIME = generated_models_dir)
+
   if (nzchar(startup_file) && file.exists(startup_file)) {
     if (!nzchar(Sys.getenv("VE_HOME", unset = ""))) {
       Sys.setenv(VE_HOME = normalizePath(ve_home, winslash = "/", mustWork = TRUE))
-    }
-    if (!nzchar(Sys.getenv("VE_RUNTIME", unset = ""))) {
-      runtime_path <- if (nzchar(ve_runtime)) {
-        runtime_input <- if (is_absolute_path(ve_runtime)) {
-          ve_runtime
-        } else {
-          file.path(repo_root, ve_runtime)
-        }
-        normalizePath(runtime_input, winslash = "/", mustWork = FALSE)
-      } else {
-        normalizePath(file.path(repo_root, "outputs", "generated_models"), winslash = "/", mustWork = TRUE)
-      }
-      Sys.setenv(VE_RUNTIME = runtime_path)
     }
 
     old_wd <- setwd(normalizePath(ve_home, winslash = "/", mustWork = TRUE))
@@ -166,6 +154,10 @@ load_visioneval_runtime <- function(repo_root) {
   )
 }
 
+function_available <- function(name) {
+  exists(name, mode = "function", inherits = TRUE)
+}
+
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) != 1 || !nzchar(args[[1]])) {
   stop("Usage: Rscript scripts/run_region_model.R <region_name>", call. = FALSE)
@@ -173,8 +165,13 @@ if (length(args) != 1 || !nzchar(args[[1]])) {
 
 region_name <- args[[1]]
 repo_root <- find_repo_root()
+generated_models_dir <- normalizePath(
+  file.path(repo_root, "outputs", "generated_models"),
+  winslash = "/",
+  mustWork = TRUE
+)
 model_dir <- normalizePath(
-  file.path(repo_root, "outputs", "generated_models", region_name),
+  file.path(generated_models_dir, region_name),
   winslash = "/",
   mustWork = FALSE
 )
@@ -188,14 +185,30 @@ if (!dir.exists(model_dir)) {
 }
 
 require_model_contents(model_dir)
-runtime_method <- load_visioneval_runtime(repo_root)
+runtime_method <- load_visioneval_runtime(repo_root, generated_models_dir)
 message("Loaded VisionEval runtime via: ", runtime_method)
 
-old_wd <- setwd(model_dir)
+open_model_available <- function_available("openModel")
+message("Model name: ", region_name)
+message("Generated models directory: ", generated_models_dir)
+message("VE_RUNTIME: ", Sys.getenv("VE_RUNTIME", unset = "<unset>"))
+message("Run strategy: openModel/model$run")
+message("openModel available: ", open_model_available)
+
+if (!open_model_available) {
+  stop(
+    "VisionEval runtime loaded, but openModel() is not available. ",
+    "This runner expects the VE-3 VisionEval API. ",
+    "Check that VE_HOME points to a compatible VisionEval runtime.",
+    call. = FALSE
+  )
+}
+
+old_wd <- setwd(generated_models_dir)
 on.exit(setwd(old_wd), add = TRUE)
 
-initializeModel()
-source(file.path("scripts", "run_model.R"))
+model <- openModel(region_name)
+model$run()
 
 results_dir <- file.path(model_dir, "results")
 message("Model run complete. Results directory:")

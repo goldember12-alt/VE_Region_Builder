@@ -50,13 +50,16 @@ geography <- read_statewide_geography(config$source_model_dir, config$geography_
 geo_mask <- build_geo_mask(
   geography = geography,
   selected_mareas = config$selected_mareas,
-  region_geo_values = config$region_geo_values
+  region_geo_values = config$region_geo_values,
+  czone_mode = config$czone_mode
 )
+message("Czone mode: ", geo_mask$czone_mode)
 
 generated_geography <- write_generated_geography(
   geography = geo_mask$geography,
   output_model_dir = config$output_model_dir,
-  geography_file = config$geography_file
+  geography_file = config$geography_file,
+  czone_mode = geo_mask$czone_mode
 )
 message("Wrote generated geography: ", generated_geography)
 

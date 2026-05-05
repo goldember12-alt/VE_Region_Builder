@@ -20,8 +20,15 @@ inputs to a selected set of Mareas and writes a region-specific VisionEval input
 folder.
 
 The statewide geography file defines which zones belong to each region. You
-select the Mareas, and the workflow finds the related Azones, Bzones, and Czones
-from that file.
+select the Mareas, and the workflow finds the related Azones and Bzones from
+that file.
+
+This RegionBuilder workflow currently supports Azone, Bzone, and Marea
+geography. The current statewide source data does not define meaningful Czones.
+VisionEval still requires a `Czone` column in `defs/geo.csv`, so RegionBuilder
+writes literal `NA` values in that column when Czones are absent. In VisionEval,
+that is the mechanical sentinel for unspecified Czones; it is not an analytical
+Czone assignment.
 
 File handling is controlled by `metadata/input_manifest.csv`. The workflow does not guess how each file should be filtered or copied.
 
@@ -153,6 +160,10 @@ region:
     - Example Marea
   region_geo_values:
     - Virginia
+  # auto treats Czone as absent when the source geography has no meaningful
+  # Czone values. VisionEval requires a Czone column, so absent Czones are
+  # written as literal NA values.
+  czone_mode: auto
 
 paths:
   source_model_dir: outputs/generated_models/statewide_va_clean
@@ -292,6 +303,14 @@ Run a generated region model:
 scripts\run_region_model.cmd greater_richmond
 ```
 
+The wrapper loads VisionEval, sets `VE_RUNTIME` to `outputs/generated_models`,
+and runs the VE-3 model object API internally:
+
+```r
+mod <- openModel("greater_richmond")
+mod$run()
+```
+
 Replace `greater_richmond` with another generated folder name, such as `hampton_roads` or `wppdc`.
 
 After a successful run, outputs are written under:
@@ -410,6 +429,32 @@ surprises.
 `Package 'visioneval' visible` is `FALSE`:
 
 That is normal for many VisionEval installs. RegionBuilder can still run models if `VE_HOME/VisionEval.R exists` and `VisionEval startup check` are both `TRUE`.
+
+`openModel() is not available`:
+
+The VisionEval runtime loaded, but the expected VE-3 API was not exposed. Confirm
+that `VE_HOME` points to the runtime folder containing `VisionEval.R`, confirm
+the runtime is compatible with the selected R version, and rerun:
+
+```cmd
+scripts\check_visioneval_runtime.cmd
+```
+
+`initializeModel() not found`:
+
+This usually means old or classic VisionEval run instructions are being used.
+RegionBuilder uses the VE-3 API:
+
+```r
+mod <- openModel("modelName")
+mod$run()
+```
+
+Use the current runner:
+
+```cmd
+scripts\run_region_model.cmd <model_name>
+```
 
 `Incorrect R version for this VisionEval installation`:
 

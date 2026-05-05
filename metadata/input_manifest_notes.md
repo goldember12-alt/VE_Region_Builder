@@ -10,3 +10,7 @@ Required columns:
 - `notes`: human-readable context copied into the validation report
 
 The generated `defs/geography.csv` is built directly from the statewide geography crosswalk and should not be listed as a `copy` row in the manifest.
+
+Current Virginia statewide inputs do not define meaningful Czones. RegionBuilder
+treats Czone as absent for those inputs and writes VisionEval's literal `NA`
+sentinel in `defs/geo.csv`.

@@ -46,7 +46,8 @@ geo_mask <- build_geo_mask(
 generated_geography <- write_generated_geography(
   geography = geo_mask$geography,
   output_model_dir = config$output_model_dir,
-  geography_file = config$geography_file
+  geography_file = config$geography_file,
+  czone_mode = geo_mask$czone_mode
 )
 message("Wrote generated geography: ", generated_geography)
 
