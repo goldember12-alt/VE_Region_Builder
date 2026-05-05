@@ -1,0 +1,4 @@
+file,geo_level,action,notes
+inputs/bzone_lat_lon.csv,Bzone,filter_geo,Smoke test Bzone geography.
+inputs/bzone_parking.csv,Bzone,filter_geo,Smoke test Bzone input.
+inputs/azone_per_cap_inc.csv,Azone,filter_geo,Smoke test Azone input.

@@ -25,15 +25,20 @@ message("Expected file list: ", config$filelist_path)
 if (!is.na(config$manual_mapping_path)) {
   message("Manual mappings: ", config$manual_mapping_path)
 }
+if (!is.na(config$geography_file) && nzchar(config$geography_file)) {
+  message("Explicit geography: ", config$geography_file, " -> ", config$geography_destination)
+}
 message("Output model: ", config$output_model_dir)
 
 result <- assemble_statewide_model(config, repo_root)
 summary <- result$summary
 
 message("Wrote statewide assembly report: ", result$report_path)
+message("Wrote statewide column rename report: ", result$column_rename_report_path)
 message("Expected files: ", summary$expected_count)
 message("Injected files: ", summary$injected_count)
 message("Manual mappings injected: ", summary$manual_mapping_count)
+message("Explicit geography injections: ", summary$explicit_geography_count)
 message("Template existing files: ", summary$template_existing_count)
 message("Missing files: ", summary$missing_count)
 message("Ambiguous files: ", summary$ambiguous_count)

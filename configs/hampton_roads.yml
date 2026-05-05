@@ -1,14 +1,21 @@
 region:
-  name: example_north
+  name: hampton_roads
   mareas:
-    - North
+    - Norfolk City
+    - Virginia Beach City
+    - Chesapeake City
+    - Portsmouth City
+    - Suffolk City
+    - Hampton City
+    - Newport News City
   # Used only for manifest rows declared at geo_level: Region.
-  # Marea/Azone/Bzone/Czone values are derived from defs/geography.csv.
+  # Marea/Azone/Bzone/Czone values are derived from the configured geography file.
   region_geo_values:
     - Virginia
 
 paths:
-  source_model_dir: tests/fixtures/statewide_model
-  output_model_dir: outputs/generated_models/example_north
-  validation_report: outputs/reports/example_north_validation.csv
-  manifest: metadata/input_manifest.csv
+  source_model_dir: outputs/generated_models/statewide_va_clean
+  output_model_dir: outputs/generated_models/hampton_roads
+  validation_report: outputs/reports/hampton_roads_validation.csv
+  manifest: metadata/input_manifest_hampton_roads_smoke.csv
+  geography_file: defs/geo.csv

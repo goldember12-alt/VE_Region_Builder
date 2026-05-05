@@ -1,0 +1,55 @@
+file,geo_level,action,notes
+inputs/azone_carsvc_characteristics.csv,Azone,filter_geo,Azone-prefixed file contains standard Geo column.
+inputs/azone_charging_availability.csv,Azone,filter_geo,Azone-prefixed file contains standard Geo column.
+inputs/azone_electricity_carbon_intensity.csv,Azone,filter_geo,Azone-prefixed file contains standard Geo column.
+inputs/azone_fuel_power_cost.csv,Azone,filter_geo,Azone-prefixed file contains standard Geo column.
+inputs/azone_gq_pop_by_age.csv,Azone,filter_geo,Azone-prefixed file contains standard Geo column.
+inputs/azone_hh_av_veh_per_driver.csv,Azone,filter_geo,Geo column normalized during statewide assembly
+inputs/azone_hh_lttrk_prop.csv,Azone,filter_geo,Azone-prefixed file contains standard Geo column.
+inputs/azone_hh_pop_by_age.csv,Azone,filter_geo,Azone-prefixed file contains standard Geo column.
+inputs/azone_hh_veh_mean_age.csv,Azone,filter_geo,Azone-prefixed file contains standard Geo column.
+inputs/marea_census_r.csv,Marea,filter_geo,Marea-prefixed file contains standard Geo column.
+inputs/azone_hh_veh_own_taxes.csv,Azone,filter_geo,Azone-prefixed file contains standard Geo column.
+inputs/azone_hhsize_targets.csv,Azone,filter_geo,Azone-prefixed file contains standard Geo column.
+inputs/azone_lttrk_prop.csv,Azone,filter_geo,Azone-prefixed file contains standard Geo column.
+inputs/azone_payd_insurance_prop.csv,Azone,filter_geo,Azone-prefixed file contains standard Geo column.
+inputs/azone_per_cap_inc.csv,Azone,filter_geo,Azone-prefixed file contains standard Geo column.
+inputs/azone_prop_sov_dvmt_diverted.csv,Azone,filter_geo,Azone-prefixed file contains standard Geo column.
+inputs/azone_relative_employment.csv,Azone,filter_geo,Azone-prefixed file contains standard Geo column.
+inputs/azone_veh_use_taxes.csv,Azone,filter_geo,Azone-prefixed file contains standard Geo column.
+inputs/azone_vehicle_access_times.csv,Azone,filter_geo,Azone-prefixed file contains standard Geo column.
+inputs/bzone_carsvc_availability.csv,Bzone,filter_geo,Bzone-prefixed file contains standard Geo column.
+inputs/bzone_dwelling_units.csv,Bzone,filter_geo,Bzone-prefixed file contains standard Geo column.
+inputs/bzone_employment.csv,Bzone,filter_geo,Bzone-prefixed file contains standard Geo column.
+inputs/bzone_hh_inc_qrtl_prop.csv,Bzone,filter_geo,Bzone-prefixed file contains standard Geo column.
+inputs/bzone_lat_lon.csv,Bzone,filter_geo,Bzone-prefixed file contains standard Geo column.
+inputs/bzone_network_design.csv,Bzone,filter_geo,Bzone-prefixed file contains standard Geo column.
+inputs/bzone_parking.csv,Bzone,filter_geo,Bzone-prefixed file contains standard Geo column.
+inputs/bzone_transit_service.csv,Bzone,filter_geo,Bzone-prefixed file contains standard Geo column.
+inputs/bzone_travel_demand_mgt.csv,Bzone,filter_geo,Bzone-prefixed file contains standard Geo column.
+inputs/bzone_unprotected_area.csv,Bzone,filter_geo,Geo column normalized during statewide assembly
+inputs/bzone_urban-mixed-use_prop.csv,Bzone,filter_geo,Geo column normalized during statewide assembly
+inputs/bzone_urban-town_du_proportions.csv,Bzone,filter_geo,Bzone-prefixed file contains standard Geo column.
+inputs/marea_base_year_dvmt.csv,Marea,filter_geo,Marea-prefixed file contains standard Geo column.
+inputs/marea_congestion_charges.csv,Marea,filter_geo,Marea-prefixed file contains standard Geo column.
+inputs/marea_dvmt_split_by_road_class.csv,Marea,filter_geo,Marea-prefixed file contains standard Geo column.
+inputs/marea_lane_miles.csv,Marea,filter_geo,Marea-prefixed file contains standard Geo column.
+inputs/marea_operations_deployment.csv,Marea,filter_geo,Marea-prefixed file contains standard Geo column.
+inputs/marea_speed_smooth_ecodrive.csv,Marea,filter_geo,Marea-prefixed file contains standard Geo column.
+inputs/marea_transit_biofuel_mix.csv,Marea,filter_geo,Marea-prefixed file contains standard Geo column.
+inputs/marea_transit_fuel.csv,Marea,filter_geo,Marea-prefixed file contains standard Geo column.
+inputs/marea_transit_powertrain_prop.csv,Marea,filter_geo,Marea-prefixed file contains standard Geo column.
+inputs/marea_transit_service.csv,Marea,filter_geo,Marea-prefixed file contains standard Geo column.
+inputs/model_parameters.json,Region,copy,Non-CSV model parameter file; not suitable for Geo filtering.
+inputs/other_ops_effectiveness.csv,Region,copy,Lookup table keyed by Level rather than Geo; copy unchanged pending model review.
+inputs/region_base_year_dvmt.csv,Region,copy,Region-level parameter file has no Geo column; copy unchanged.
+inputs/region_carsvc_powertrain_prop.csv,Region,copy,Region-level parameter file has no Geo column; copy unchanged.
+inputs/region_comsvc_lttrk_prop.csv,Region,copy,Region-level parameter file has no Geo column; copy unchanged.
+inputs/region_comsvc_powertrain_prop.csv,Region,copy,Region-level parameter file has no Geo column; copy unchanged.
+inputs/region_comsvc_veh_mean_age.csv,Region,copy,Region-level parameter file has no Geo column; copy unchanged.
+inputs/region_hh_ave_driver_per_capita.csv,Region,copy,Region-level parameter file has no Geo column; copy unchanged.
+inputs/region_hvytrk_powertrain_prop.csv,Region,copy,Region-level parameter file has no Geo column; copy unchanged.
+inputs/region_prop_externalities_paid.csv,Region,copy,Region-level parameter file has no Geo column; copy unchanged.
+inputs/region_road_cost.csv,Region,copy,Region-level parameter file has no Geo column; copy unchanged.
+defs/units.csv,Region,copy,Definition table has no Geo column and should be copied unchanged if needed.
+defs/deflators.csv,Region,copy,Definition table has no Geo column and should be copied unchanged if needed.

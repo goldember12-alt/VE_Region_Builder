@@ -1,0 +1,4 @@
+file,old_column,new_column,approved,notes
+inputs/azone_hh_av_veh_per_driver.csv,Azone,Geo,true,Normalize geography key column for VisionEval
+inputs/bzone_unprotected_area.csv,GeoIDTxt,Geo,true,Normalize geography key column for VisionEval
+inputs/bzone_urban-mixed-use_prop.csv,GEOID,Geo,true,Normalize geography key column for VisionEval

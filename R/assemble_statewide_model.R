@@ -3,6 +3,9 @@ statewide_assembly_defaults <- list(
   updated_csv_dir = "C:/Users/Jameson.Clements/source/VE_Models/models/updatedcsvs",
   filelist_path = "data_sources/filelist.txt",
   manual_mapping_path = NA_character_,
+  column_renames_path = NA_character_,
+  geography_file = NA_character_,
+  geography_destination = NA_character_,
   output_model_dir = "outputs/generated_models/statewide_va_clean",
   report_path = "outputs/reports/statewide_assembly_report.csv",
   overwrite_output = TRUE
@@ -57,6 +60,15 @@ read_statewide_assembly_config <- function(args, repo_root) {
       config$manual_mapping_path <- paths$manual_mapping_path %||%
         yaml_config$manual_mapping_path %||%
         config$manual_mapping_path
+      config$column_renames_path <- paths$column_renames_path %||%
+        yaml_config$column_renames_path %||%
+        config$column_renames_path
+      config$geography_file <- paths$geography_file %||%
+        yaml_config$geography_file %||%
+        config$geography_file
+      config$geography_destination <- paths$geography_destination %||%
+        yaml_config$geography_destination %||%
+        config$geography_destination
       config$output_model_dir <- paths$output_model_dir %||%
         yaml_config$output_model_dir %||%
         config$output_model_dir
@@ -92,6 +104,13 @@ read_statewide_assembly_config <- function(args, repo_root) {
     } else {
       normalize_project_path(config$manual_mapping_path, repo_root)
     },
+    column_renames_path = if (is.na(config$column_renames_path) || !nzchar(config$column_renames_path)) {
+      NA_character_
+    } else {
+      normalize_project_path(config$column_renames_path, repo_root)
+    },
+    geography_file = config$geography_file,
+    geography_destination = config$geography_destination,
     output_model_dir = normalize_project_path(config$output_model_dir, repo_root),
     report_path = normalize_project_path(config$report_path, repo_root),
     overwrite_output = isTRUE(config$overwrite_output)
@@ -110,6 +129,22 @@ validate_statewide_assembly_paths <- function(config, repo_root) {
   }
   if (!is.na(config$manual_mapping_path) && !file.exists(config$manual_mapping_path)) {
     stop("manual_mapping_path does not exist: ", config$manual_mapping_path, call. = FALSE)
+  }
+  if (!is.na(config$column_renames_path) && !file.exists(config$column_renames_path)) {
+    stop("column_renames_path does not exist: ", config$column_renames_path, call. = FALSE)
+  }
+  has_geography_file <- !is.na(config$geography_file) && nzchar(config$geography_file)
+  has_geography_destination <- !is.na(config$geography_destination) && nzchar(config$geography_destination)
+  if (xor(has_geography_file, has_geography_destination)) {
+    stop("geography_file and geography_destination must be configured together.", call. = FALSE)
+  }
+  if (has_geography_file) {
+    validate_relative_file_path(config$geography_file, "geography_file")
+    validate_relative_file_path(config$geography_destination, "geography_destination")
+    geography_source <- fs::path(config$updated_csv_dir, config$geography_file)
+    if (!file.exists(geography_source)) {
+      stop("Configured geography_file does not exist under updated_csv_dir: ", geography_source, call. = FALSE)
+    }
   }
 
   outputs_root <- normalizePath(file.path(repo_root, "outputs"), winslash = "/", mustWork = FALSE)
@@ -163,6 +198,57 @@ read_manual_file_mappings <- function(manual_mapping_path) {
   }
 
   tibble::as_tibble(mappings)
+}
+
+read_column_renames <- function(column_renames_path) {
+  required_columns <- c("file", "old_column", "new_column", "approved", "notes")
+
+  if (is.na(column_renames_path) || !nzchar(column_renames_path)) {
+    return(tibble::tibble(
+      file = character(),
+      old_column = character(),
+      new_column = character(),
+      approved = logical(),
+      notes = character()
+    ))
+  }
+
+  renames <- readr::read_csv(column_renames_path, show_col_types = FALSE)
+  missing_columns <- setdiff(required_columns, names(renames))
+  if (length(missing_columns) > 0) {
+    stop(
+      "column_renames_path is missing required columns: ",
+      paste(missing_columns, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  renames <- renames[, required_columns]
+  renames$file <- trimws(renames$file)
+  renames$old_column <- trimws(renames$old_column)
+  renames$new_column <- trimws(renames$new_column)
+  renames$approved <- tolower(trimws(as.character(renames$approved))) %in% c("true", "t", "1", "yes", "y")
+  renames$notes <- trimws(renames$notes)
+
+  if (any(!renames$approved)) {
+    stop("All configured column renames must be explicitly approved=true.", call. = FALSE)
+  }
+
+  empty_values <- !nzchar(renames$file) | !nzchar(renames$old_column) | !nzchar(renames$new_column)
+  if (any(empty_values)) {
+    stop("Approved column renames must include file, old_column, and new_column.", call. = FALSE)
+  }
+
+  for (file in renames$file) {
+    validate_relative_file_path(file, "column rename file")
+  }
+
+  duplicated_renames <- duplicated(paste(renames$file, renames$old_column, renames$new_column, sep = "\r"))
+  if (any(duplicated_renames)) {
+    stop("column_renames_path contains duplicate rename rows.", call. = FALSE)
+  }
+
+  tibble::as_tibble(renames)
 }
 
 resolve_manual_mapping <- function(expected_row, updated_csvs, manual_mappings) {
@@ -378,6 +464,26 @@ build_statewide_assembly_plan <- function(expected, updated_csvs, manual_mapping
   dplyr::bind_rows(rows)
 }
 
+append_explicit_geography_injection <- function(plan, config) {
+  if (is.na(config$geography_file) || !nzchar(config$geography_file)) {
+    return(plan)
+  }
+
+  geography_source <- fs::path(config$updated_csv_dir, config$geography_file)
+  geography_row <- tibble::tibble(
+    order = NA_integer_,
+    expected_file = basename(config$geography_destination),
+    expected_relative_path = config$geography_destination,
+    matched_updated_file = config$geography_file,
+    matched_updated_path = normalizePath(geography_source, winslash = "/", mustWork = TRUE),
+    match_type = "explicit_geography",
+    status = "injected",
+    notes = "Explicit statewide geography injection outside data_sources/filelist.txt."
+  )
+
+  dplyr::bind_rows(plan, geography_row)
+}
+
 copy_template_model <- function(template_model_dir, output_model_dir, overwrite_output) {
   if (dir.exists(output_model_dir)) {
     if (!overwrite_output) {
@@ -401,6 +507,57 @@ inject_updated_csvs <- function(plan, output_model_dir) {
   }
 
   nrow(injected)
+}
+
+apply_column_renames <- function(column_renames, output_model_dir, report_path) {
+  rows <- vector("list", nrow(column_renames))
+
+  for (row_index in seq_len(nrow(column_renames))) {
+    rename <- column_renames[row_index, ]
+    target_path <- fs::path(output_model_dir, rename$file[[1]])
+
+    if (!file.exists(target_path)) {
+      stop("Column rename target generated file does not exist: ", target_path, call. = FALSE)
+    }
+    if (!grepl("\\.csv$", target_path, ignore.case = TRUE)) {
+      stop("Column rename target must be a CSV file: ", target_path, call. = FALSE)
+    }
+
+    data <- readr::read_csv(
+      target_path,
+      col_types = readr::cols(.default = readr::col_character()),
+      show_col_types = FALSE,
+      progress = FALSE
+    )
+
+    columns <- names(data)
+    old_column <- rename$old_column[[1]]
+    new_column <- rename$new_column[[1]]
+
+    if (!old_column %in% columns) {
+      stop("Column rename old_column is missing in ", rename$file[[1]], ": ", old_column, call. = FALSE)
+    }
+    if (new_column %in% columns && old_column != new_column) {
+      stop("Column rename new_column already exists in ", rename$file[[1]], ": ", new_column, call. = FALSE)
+    }
+
+    names(data)[names(data) == old_column] <- new_column
+    readr::write_csv(data, target_path, na = "")
+
+    rows[[row_index]] <- tibble::tibble(
+      file = rename$file[[1]],
+      old_column = old_column,
+      new_column = new_column,
+      approved = rename$approved[[1]],
+      status = "renamed",
+      notes = rename$notes[[1]]
+    )
+  }
+
+  report <- dplyr::bind_rows(rows)
+  fs::dir_create(fs::path_dir(report_path))
+  readr::write_csv(report, report_path, na = "")
+  report_path
 }
 
 append_unused_updated_csvs <- function(plan, updated_csvs) {
@@ -446,6 +603,7 @@ summarize_statewide_assembly <- function(report) {
     injected_count = sum(expected_rows$status == "injected"),
     manual_mapping_count = sum(expected_rows$match_type == "manual_mapping" & expected_rows$status == "injected"),
     template_existing_count = sum(expected_rows$status == "template_existing"),
+    explicit_geography_count = sum(report$match_type == "explicit_geography" & report$status == "injected"),
     missing_count = sum(expected_rows$status == "missing"),
     ambiguous_count = sum(expected_rows$status == "ambiguous"),
     no_template_location_count = sum(expected_rows$status == "no_template_location"),
@@ -461,7 +619,9 @@ assemble_statewide_model <- function(config, repo_root) {
   expected <- attach_expected_relative_paths(expected, template_files)
   updated_csvs <- inspect_updated_csvs(config$updated_csv_dir)
   manual_mappings <- read_manual_file_mappings(config$manual_mapping_path)
+  column_renames <- read_column_renames(config$column_renames_path)
   plan <- build_statewide_assembly_plan(expected, updated_csvs, manual_mappings)
+  plan <- append_explicit_geography_injection(plan, config)
 
   copy_template_model(
     template_model_dir = config$template_model_dir,
@@ -470,12 +630,15 @@ assemble_statewide_model <- function(config, repo_root) {
   )
 
   inject_updated_csvs(plan, config$output_model_dir)
+  column_rename_report_path <- file.path(repo_root, "outputs", "reports", "statewide_column_rename_report.csv")
+  apply_column_renames(column_renames, config$output_model_dir, column_rename_report_path)
   report <- append_unused_updated_csvs(plan, updated_csvs)
   report_path <- write_statewide_assembly_report(report, config$report_path)
 
   list(
     report = report,
     report_path = report_path,
+    column_rename_report_path = column_rename_report_path,
     summary = summarize_statewide_assembly(report)
   )
 }

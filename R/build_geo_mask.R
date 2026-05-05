@@ -45,6 +45,19 @@ assert_path_under <- function(path, parent, label) {
   invisible(normalized_path)
 }
 
+validate_relative_file_path <- function(path, label) {
+  if (is_absolute_path(path)) {
+    stop(label, " must be relative: ", path, call. = FALSE)
+  }
+
+  parts <- unlist(strsplit(path, "[/\\\\]+"))
+  if (".." %in% parts || any(!nzchar(parts))) {
+    stop(label, " must be a clean relative file path: ", path, call. = FALSE)
+  }
+
+  invisible(TRUE)
+}
+
 clean_values <- function(values) {
   unique(stats::na.omit(as.character(values)))
 }
@@ -82,6 +95,7 @@ read_region_config <- function(config_path, repo_root = getwd()) {
   output_model_dir <- paths$output_model_dir %||% config$output_model_dir
   validation_report <- paths$validation_report %||% config$validation_report
   manifest <- paths$manifest %||% config$manifest %||% "metadata/input_manifest.csv"
+  geography_file <- paths$geography_file %||% config$geography_file %||% "defs/geography.csv"
 
   if (is.null(source_model_dir) || is.null(output_model_dir) || is.null(validation_report)) {
     stop(
@@ -99,12 +113,14 @@ read_region_config <- function(config_path, repo_root = getwd()) {
     source_model_dir = normalize_project_path(source_model_dir, repo_root),
     output_model_dir = normalize_project_path(output_model_dir, repo_root),
     validation_report = normalize_project_path(validation_report, repo_root),
-    manifest = normalize_project_path(manifest, repo_root)
+    manifest = normalize_project_path(manifest, repo_root),
+    geography_file = as.character(geography_file)
   )
 }
 
-read_statewide_geography <- function(source_model_dir) {
-  geography_path <- fs::path(source_model_dir, "defs", "geography.csv")
+read_statewide_geography <- function(source_model_dir, geography_file = "defs/geography.csv") {
+  validate_relative_file_path(geography_file, "paths.geography_file")
+  geography_path <- fs::path(source_model_dir, geography_file)
   if (!file.exists(geography_path)) {
     stop("Statewide geography file not found: ", geography_path, call. = FALSE)
   }
@@ -122,7 +138,7 @@ build_geo_mask <- function(geography, selected_mareas, region_geo_values) {
   missing_columns <- setdiff(required_columns, names(geography))
   if (length(missing_columns) > 0) {
     stop(
-      "defs/geography.csv is missing required column(s): ",
+      "Geography file is missing required column(s): ",
       paste(missing_columns, collapse = ", "),
       call. = FALSE
     )
@@ -133,7 +149,7 @@ build_geo_mask <- function(geography, selected_mareas, region_geo_values) {
   missing_mareas <- setdiff(selected_mareas, geography_mareas)
   if (length(missing_mareas) > 0) {
     stop(
-      "Selected Marea value(s) not found in defs/geography.csv: ",
+      "Selected Marea value(s) not found in geography file: ",
       paste(missing_mareas, collapse = ", "),
       call. = FALSE
     )
@@ -158,8 +174,9 @@ build_geo_mask <- function(geography, selected_mareas, region_geo_values) {
   )
 }
 
-write_generated_geography <- function(geography, output_model_dir) {
-  output_path <- fs::path(output_model_dir, "defs", "geography.csv")
+write_generated_geography <- function(geography, output_model_dir, geography_file = "defs/geography.csv") {
+  validate_relative_file_path(geography_file, "paths.geography_file")
+  output_path <- fs::path(output_model_dir, geography_file)
   fs::dir_create(fs::path_dir(output_path))
   readr::write_csv(geography, output_path, na = "")
   output_path

@@ -1,5 +1,0 @@
-file,geo_level,action,input_rows,output_rows,input_unique_geo_count,output_unique_geo_count,unexpected_output_geo_count,missing_allowed_geo_count,status,notes
-azone_values.csv,Azone,filter_geo,2,1,2,1,0,0,ok,Example fixture Azone-level input.
-bzone_values.csv,Bzone,filter_geo,3,2,3,2,0,0,ok,Example fixture Bzone-level input.
-model_parameters.csv,Region,copy,2,2,,,,,ok,Example non-geographic file copied unchanged.
-needs_review.csv,Marea,review,2,,2,,,,review_required,Example file intentionally skipped for manual review.

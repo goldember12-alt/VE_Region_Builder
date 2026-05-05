@@ -43,6 +43,8 @@ tests/
   fixtures/
 ```
 
+For packaging and distribution guidance, see `docs/PACKAGING.md`.
+
 ## Config Format
 
 Statewide assembly config:
@@ -53,6 +55,9 @@ paths:
   updated_csv_dir: C:/Users/Jameson.Clements/source/VE_Models/models/updatedcsvs
   filelist_path: data_sources/filelist.txt
   manual_mapping_path: metadata/statewide_manual_file_mappings.csv
+  column_renames_path: metadata/statewide_column_renames.csv
+  geography_file: geo.csv
+  geography_destination: defs/geo.csv
   output_model_dir: outputs/generated_models/statewide_va_clean
   report_path: outputs/reports/statewide_assembly_report.csv
 
@@ -78,11 +83,12 @@ paths:
   output_model_dir: outputs/generated_models/example_north
   validation_report: outputs/reports/example_north_validation.csv
   manifest: metadata/input_manifest.csv
+  geography_file: defs/geography.csv
 ```
 
-`region.mareas` selects the planning region. `region.region_geo_values` is used only for manifest rows declared as `geo_level: Region`; lower geography levels are derived from `defs/geography.csv`.
+`region.mareas` selects the planning region. `region.region_geo_values` is used only for manifest rows declared as `geo_level: Region`; lower geography levels are derived from `paths.geography_file`.
 
-`paths.output_model_dir` and `paths.validation_report` must resolve under this repository's `outputs/` folder.
+`paths.geography_file` is optional and defaults to `defs/geography.csv` for fixture compatibility. For real VisionEval models using the assembled statewide source, set it to `defs/geo.csv`. `paths.output_model_dir` and `paths.validation_report` must resolve under this repository's `outputs/` folder.
 
 ## Manifest Format
 
@@ -100,7 +106,7 @@ Allowed `action` values are:
 - `copy`: copy the source file unchanged.
 - `review`: skip the file and record it in the validation report.
 
-The generated `defs/geography.csv` is created from the statewide geography crosswalk and should not be copied from the manifest.
+The generated geography file is created from the configured statewide geography crosswalk and should not be copied from the manifest.
 
 ## Run
 
@@ -128,6 +134,10 @@ Matching priority is:
 Manual mappings are only used when `approved` is true. The mapped updated CSV must exist under `updated_csv_dir`; it is copied into the expected template location while preserving the expected filename in the generated model.
 
 If an expected file has no updated CSV match but already exists in the copied template model, assembly records `status = template_existing` and leaves the template file in place. This is expected for files such as non-CSV model parameters or inputs with no approved replacement.
+
+The statewide geography crosswalk is injected explicitly from `paths.geography_file` under `updated_csv_dir` to `paths.geography_destination` in the generated model. This supports VisionEval models that use `defs/geo.csv` even though `geo.csv` is not part of `data_sources/filelist.txt`.
+
+Approved column renames in `metadata/statewide_column_renames.csv` are applied only after files are copied into the generated statewide model. This normalizes known geography key headings to `Geo` without modifying the source template or updated CSV files, and writes `outputs/reports/statewide_column_rename_report.csv`.
 
 You can also override config values with `key=value` arguments, for example:
 

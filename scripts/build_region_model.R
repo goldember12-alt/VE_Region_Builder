@@ -28,8 +28,9 @@ assert_path_under(config$validation_report, outputs_root, "paths.validation_repo
 message("Building region model inputs for: ", config$region_name)
 message("Source model inputs: ", config$source_model_dir)
 message("Output model inputs: ", config$output_model_dir)
+message("Geography file: ", config$geography_file)
 
-geography <- read_statewide_geography(config$source_model_dir)
+geography <- read_statewide_geography(config$source_model_dir, config$geography_file)
 geo_mask <- build_geo_mask(
   geography = geography,
   selected_mareas = config$selected_mareas,
@@ -38,7 +39,8 @@ geo_mask <- build_geo_mask(
 
 generated_geography <- write_generated_geography(
   geography = geo_mask$geography,
-  output_model_dir = config$output_model_dir
+  output_model_dir = config$output_model_dir,
+  geography_file = config$geography_file
 )
 message("Wrote generated geography: ", generated_geography)
 
