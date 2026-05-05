@@ -85,6 +85,11 @@ read_region_config <- function(config_path, repo_root = getwd()) {
   }
 
   region_name <- region$name %||% config$region_name %||% "region"
+  model_region <- region$model_region %||% config$model_region %||% region_name
+  scenario <- region$scenario %||% config$scenario %||% "Base"
+  description <- region$description %||%
+    config$description %||%
+    paste("VERSPM for", model_region, "model")
   region_geo_values <- region$region_geo_values %||%
     config$region_geo_values %||%
     region$geo_values %||%
@@ -108,6 +113,9 @@ read_region_config <- function(config_path, repo_root = getwd()) {
   list(
     config_path = config_path,
     region_name = as.character(region_name),
+    model_region = as.character(model_region),
+    scenario = as.character(scenario),
+    description = as.character(description),
     selected_mareas = selected_mareas,
     region_geo_values = region_geo_values,
     source_model_dir = normalize_project_path(source_model_dir, repo_root),

@@ -123,6 +123,9 @@ Edit `configs/my_region.yml`:
 ```yaml
 region:
   name: my_region
+  model_region: My Region
+  scenario: Base
+  description: VERSPM for My Region model
   mareas:
     - Example Marea
   region_geo_values:
@@ -147,6 +150,14 @@ Expected outputs:
 ```text
 outputs/generated_models/my_region/
 outputs/reports/my_region_validation.csv
+```
+
+The generated model folder is a runnable VisionEval model structure. It includes the scaffold copied from the assembled statewide source model, filtered regional inputs, generated regional geography, `queries/`, `scripts/`, and root model files such as `visioneval.cnf`. It does not copy `results/`; VisionEval creates `results/` when the model runs.
+
+Run the generated model from its model folder:
+
+```powershell
+Rscript -e "setwd('outputs/generated_models/my_region'); library(visioneval); initializeModel(); source(file.path('scripts', 'run_model.R'))"
 ```
 
 ## Manifest Rules

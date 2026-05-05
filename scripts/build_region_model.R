@@ -30,6 +30,22 @@ message("Source model inputs: ", config$source_model_dir)
 message("Output model inputs: ", config$output_model_dir)
 message("Geography file: ", config$geography_file)
 
+initialize_region_model_dir(
+  source_model_dir = config$source_model_dir,
+  output_model_dir = config$output_model_dir
+)
+message("Initialized runnable model scaffold.")
+
+cnf_path <- rewrite_visioneval_cnf(
+  output_model_dir = config$output_model_dir,
+  model_region = config$model_region,
+  scenario = config$scenario,
+  description = config$description
+)
+if (!is.na(cnf_path)) {
+  message("Updated VisionEval config: ", cnf_path)
+}
+
 geography <- read_statewide_geography(config$source_model_dir, config$geography_file)
 geo_mask <- build_geo_mask(
   geography = geography,

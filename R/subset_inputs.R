@@ -1,5 +1,61 @@
 valid_manifest_actions <- c("filter_geo", "copy", "review")
 
+initialize_region_model_dir <- function(source_model_dir, output_model_dir) {
+  normalized_source <- normalizePath(source_model_dir, winslash = "/", mustWork = TRUE)
+  normalized_output <- normalizePath(output_model_dir, winslash = "/", mustWork = FALSE)
+
+  if (normalized_source == normalized_output) {
+    stop("paths.output_model_dir must be different from paths.source_model_dir.", call. = FALSE)
+  }
+
+  if (dir.exists(normalized_output)) {
+    fs::dir_delete(normalized_output)
+  }
+  fs::dir_create(normalized_output)
+
+  entries <- list.files(normalized_source, all.files = FALSE, full.names = TRUE, no.. = TRUE)
+  scaffold_entries <- entries[!basename(entries) %in% c("inputs", "results")]
+
+  for (entry in scaffold_entries) {
+    destination <- fs::path(normalized_output, basename(entry))
+    if (dir.exists(entry)) {
+      fs::dir_copy(entry, destination)
+    } else {
+      fs::file_copy(entry, destination)
+    }
+  }
+
+  fs::dir_create(fs::path(normalized_output, "inputs"))
+  invisible(normalized_output)
+}
+
+replace_cnf_value <- function(lines, key, value) {
+  pattern <- paste0("^", key, "\\s*:")
+  replacement <- paste0(key, "         : ", value)
+  matches <- grepl(pattern, lines)
+
+  if (!any(matches)) {
+    return(c(lines, replacement))
+  }
+
+  lines[matches] <- replacement
+  lines
+}
+
+rewrite_visioneval_cnf <- function(output_model_dir, model_region, scenario, description) {
+  cnf_path <- fs::path(output_model_dir, "visioneval.cnf")
+  if (!file.exists(cnf_path)) {
+    return(NA_character_)
+  }
+
+  lines <- readLines(cnf_path, warn = FALSE)
+  lines <- replace_cnf_value(lines, "Region", model_region)
+  lines <- replace_cnf_value(lines, "Scenario", scenario)
+  lines <- replace_cnf_value(lines, "Description", description)
+  writeLines(lines, cnf_path, useBytes = TRUE)
+  cnf_path
+}
+
 read_input_manifest <- function(manifest_path) {
   if (!file.exists(manifest_path)) {
     stop("Input manifest not found: ", manifest_path, call. = FALSE)
