@@ -23,7 +23,9 @@ pre-built VisionEval workflow, use R 4.4.2.
 VE_RegionBuilder later needs the matching `Rscript.exe` path so its `.cmd`
 wrappers can run VisionEval with the same R version.
 
-<!-- screenshot: CRAN R 4.4.2 Windows installer page -->
+![CRAN R 4.4.2 download page](assets/install_guide/01_r_442_download.png)
+
+![R 4.4.2 installation folder](assets/install_guide/02_r_442_install_location.png)
 
 ## 2. Install the VisionEval Pre-Built Release
 
@@ -42,11 +44,10 @@ Documents, but a simple dedicated folder is usually easier to maintain.
 `VE_HOME` should be a folder that contains `VisionEval.R`; it should not be the
 `VisionEval.R` file itself.
 
-<!-- screenshot: select pre-built release -->
+After installation, the VisionEval runtime folder should contain `VisionEval.R`
+and supporting runtime files:
 
-<!-- screenshot: choose VE_HOME folder -->
-
-<!-- screenshot: verify installation settings -->
+![VisionEval runtime folder containing VisionEval.R](assets/install_guide/04_visioneval_runtime_contains_visioneval_r.png)
 
 ## 3. Choose VE_RUNTIME
 
@@ -72,9 +73,9 @@ Using a separate runtime location keeps the installed VisionEval files stable
 and lets VE_RegionBuilder manage generated model outputs in the repository
 workspace.
 
-<!-- screenshot: choose VE_RUNTIME folder -->
+An example standalone VisionEval runtime/model workspace may look like this:
 
-<!-- screenshot: runtime folder contents after installation -->
+![Example runtime folder contents](assets/install_guide/03_ve_models_runtime_folder.png)
 
 ## 4. Verify `.Renviron`
 
@@ -91,7 +92,7 @@ VE_RUNTIME=C:/Path/To/Runtime
 `VE_HOME` must point to the folder containing `VisionEval.R`, not to
 `VisionEval.R` itself.
 
-<!-- screenshot: .Renviron with VE_HOME and VE_RUNTIME -->
+![Example .Renviron with VE_HOME and VE_RUNTIME](assets/install_guide/05_renviron_ve_home_runtime.png)
 
 ## 5. Verify the VisionEval Installation
 
