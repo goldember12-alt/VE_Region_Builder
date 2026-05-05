@@ -2,6 +2,7 @@ outputs/generated_models/**
 outputs/reports/**
 outputs/logs/**
 work/**
+docs/**
 data_sources/paths.yml
 configs/*.yml
 
