@@ -30,8 +30,8 @@ scripts/
   assemble_statewide_model.R
   build_region_model.R
 configs/
-  statewide_assembly.yml
-  example_region.yml
+  statewide_assembly.example.yml
+  region.example.yml
 metadata/
   input_manifest.csv
   input_manifest_notes.md
@@ -47,12 +47,19 @@ For packaging and distribution guidance, see `docs/PACKAGING.md`.
 
 ## Config Format
 
+Copy the example configs before editing machine-specific paths:
+
+```powershell
+Copy-Item configs/statewide_assembly.example.yml configs/statewide_assembly.yml
+Copy-Item configs/region.example.yml configs/my_region.yml
+```
+
 Statewide assembly config:
 
 ```yaml
 paths:
-  template_model_dir: C:/Users/Jameson.Clements/source/VE_Models/models/SayedMM
-  updated_csv_dir: C:/Users/Jameson.Clements/source/VE_Models/models/updatedcsvs
+  template_model_dir: C:/path/to/template_model
+  updated_csv_dir: C:/path/to/statewide_csv_inputs
   filelist_path: data_sources/filelist.txt
   manual_mapping_path: metadata/statewide_manual_file_mappings.csv
   column_renames_path: metadata/statewide_column_renames.csv
@@ -72,18 +79,18 @@ Example:
 
 ```yaml
 region:
-  name: example_north
+  name: my_region
   mareas:
-    - North
+    - Example Marea
   region_geo_values:
     - Virginia
 
 paths:
-  source_model_dir: tests/fixtures/statewide_model
-  output_model_dir: outputs/generated_models/example_north
-  validation_report: outputs/reports/example_north_validation.csv
+  source_model_dir: outputs/generated_models/statewide_va_clean
+  output_model_dir: outputs/generated_models/my_region
+  validation_report: outputs/reports/my_region_validation.csv
   manifest: metadata/input_manifest.csv
-  geography_file: defs/geography.csv
+  geography_file: defs/geo.csv
 ```
 
 `region.mareas` selects the planning region. `region.region_geo_values` is used only for manifest rows declared as `geo_level: Region`; lower geography levels are derived from `paths.geography_file`.
@@ -145,17 +152,17 @@ You can also override config values with `key=value` arguments, for example:
 Rscript scripts/assemble_statewide_model.R output_model_dir=outputs/generated_models/statewide_va_clean
 ```
 
-Run the fixture example from the repository root:
+Run a regional build from the repository root after editing a region config:
 
 ```powershell
-Rscript scripts/build_region_model.R configs/example_region.yml
+Rscript scripts/build_region_model.R configs/my_region.yml
 ```
 
 Expected generated paths:
 
 ```text
-outputs/generated_models/example_north/
-outputs/reports/example_north_validation.csv
+outputs/generated_models/my_region/
+outputs/reports/my_region_validation.csv
 ```
 
 ## Current Scope

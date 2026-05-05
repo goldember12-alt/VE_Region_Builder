@@ -1,0 +1,15 @@
+region:
+  name: my_region
+  mareas:
+    - Example Marea
+  # Used only for manifest rows declared at geo_level: Region.
+  # Marea/Azone/Bzone/Czone values are derived from paths.geography_file.
+  region_geo_values:
+    - Virginia
+
+paths:
+  source_model_dir: outputs/generated_models/statewide_va_clean
+  output_model_dir: outputs/generated_models/my_region
+  validation_report: outputs/reports/my_region_validation.csv
+  manifest: metadata/input_manifest.csv
+  geography_file: defs/geo.csv

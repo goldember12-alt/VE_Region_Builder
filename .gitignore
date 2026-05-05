@@ -1,0 +1,11 @@
+outputs/generated_models/**
+outputs/reports/**
+outputs/logs/**
+work/**
+data_sources/paths.yml
+configs/*.yml
+
+!outputs/generated_models/.gitkeep
+!outputs/reports/.gitkeep
+!outputs/logs/.gitkeep
+!configs/*.example.yml

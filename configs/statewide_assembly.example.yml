@@ -1,6 +1,6 @@
 paths:
-  template_model_dir: C:/Users/Jameson.Clements/source/VE_Models/models/SayedMM
-  updated_csv_dir: C:/Users/Jameson.Clements/source/VE_Models/models/updatedcsvs
+  template_model_dir: C:/path/to/template_model
+  updated_csv_dir: C:/path/to/statewide_csv_inputs
   filelist_path: data_sources/filelist.txt
   manual_mapping_path: metadata/statewide_manual_file_mappings.csv
   column_renames_path: metadata/statewide_column_renames.csv
