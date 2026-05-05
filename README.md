@@ -5,21 +5,22 @@ VisionEval model folders from a statewide VisionEval template model and a user
 supplied folder of Virginia statewide CSV inputs prepared for this workflow.
 
 The workflow is non-destructive. It does not modify VisionEval source code, the
-template model, or the source input package. Generated models, reports, and logs
-are written under `outputs/`.
+template model, or the Virginia statewide CSV input folder. Generated models,
+reports, and logs are written under `outputs/`.
 
 ## Workflow Overview
 
 ```text
-prepare VA updated CSVs -> assemble statewide source model -> build regional model -> configure VisionEval runtime -> run generated region
+prepare Virginia statewide CSV input folder -> assemble statewide source model -> build regional model -> configure VisionEval runtime -> run generated region
 ```
 
 The repository contains code, metadata, and example configs. It does not ship
 the Virginia source data, template VisionEval models, or generated results.
 
 The Greater Richmond example has been tested end to end with the prepared
-Virginia updated CSV workflow. Other regions should use the same preparation,
-assembly, build, and run sequence and may reveal additional source-data issues.
+Virginia statewide CSV input workflow. Other regions should use the same
+preparation, assembly, build, and run sequence and may reveal additional
+source-data issues.
 
 ## Before You Start
 
@@ -72,6 +73,9 @@ outputs/                   Generated outputs; ignored by git
 Run the fixture smoke test to confirm that RegionBuilder works without external
 data:
 
+The fixture is synthetic and is only intended to test RegionBuilder mechanics;
+it is not a Virginia statewide model.
+
 ```powershell
 Rscript scripts/run_fixture_smoke.R
 ```
@@ -83,10 +87,10 @@ outputs/generated_models/fixture_smoke/
 outputs/reports/fixture_smoke_validation.csv
 ```
 
-## Prepare Virginia Updated CSVs
+## Prepare Virginia Statewide CSVs
 
-Before assembling the statewide source model, normalize the Virginia updated CSV
-folder into the input contract expected by this project.
+Before assembling the statewide source model, normalize the Virginia statewide
+CSV input folder into the input contract expected by this project.
 
 ```powershell
 Rscript scripts/prepare_updatedcsvs_va_inputs.R "C:/path/to/updatedcsvs"
@@ -95,18 +99,18 @@ Rscript scripts/prepare_updatedcsvs_va_inputs.R "C:/path/to/updatedcsvs"
 Pass your own `updatedcsvs` path explicitly. Do not rely on machine-specific
 defaults.
 
-This step is safe to rerun. It validates and standardizes the updated CSVs used
-by the statewide assembly step. When changes are needed, it writes backups
-outside the updated CSV folder so backup files are not mistaken for model
+This step is safe to rerun. It validates and standardizes the Virginia statewide
+CSV input folder used by the statewide assembly step. When changes are needed,
+it writes backups outside that folder so backup files are not mistaken for model
 inputs.
 
-The preparation step is intended for Virginia statewide input packages. It
+The preparation step is intended for Virginia statewide CSV input folders. It
 preserves geography IDs as text, checks required year coverage, applies
 documented VisionEval compatibility adjustments, and verifies that required
 support files such as `deflators.csv` are available.
 
-If you are using an already prepared input package, this step should complete
-without changes and serves as a validation check.
+If you are using an already prepared Virginia statewide CSV input folder, this
+step should complete without changes and serves as a validation check.
 
 ## Assemble Statewide Source Model
 
@@ -117,7 +121,7 @@ Copy-Item configs/statewide_assembly.example.yml configs/statewide_assembly.yml
 ```
 
 Edit `configs/statewide_assembly.yml` for your template model and prepared
-updated CSV folder:
+Virginia statewide CSV input folder:
 
 ```yaml
 paths:
@@ -154,9 +158,9 @@ The assembly script copies the template model into:
 outputs/generated_models/statewide_va_clean
 ```
 
-Then it injects the prepared statewide CSVs into that generated copy according
-to `data_sources/filelist.txt`, metadata mappings, column rename rules, and
-explicit file injections.
+Then it injects the prepared Virginia statewide CSV inputs into that generated
+copy according to `data_sources/filelist.txt`, metadata mappings, column rename
+rules, and explicit file injections.
 
 Review the reports before building regions:
 
@@ -228,6 +232,9 @@ VisionEval is not included in this repository. The runtime is only required for
 checking and running generated models; preparation, assembly, and region
 building can be done before runtime configuration.
 
+For a step-by-step Windows installation walkthrough, see
+`INSTALL_VISIONEVAL_WINDOWS.md`.
+
 Configure the local runtime by copying the example config:
 
 ```powershell
@@ -291,16 +298,16 @@ After preparing inputs, assembling the statewide model, building the region, and
 configuring the runtime, run the generated region model:
 
 ```cmd
-scripts\run_region_model.cmd greater_richmond
+scripts\run_region_model.cmd my_region
 ```
 
-Replace `greater_richmond` with the generated model folder name.
+Replace `my_region` with the generated model folder name.
 
 The wrapper sets the VisionEval runtime context and runs the VE-3 model object
 API internally:
 
 ```r
-model <- openModel("greater_richmond")
+model <- openModel("my_region")
 model$run()
 ```
 
@@ -315,13 +322,13 @@ Recommended Windows command sequence:
 ```powershell
 Rscript scripts/prepare_updatedcsvs_va_inputs.R "C:/path/to/updatedcsvs"
 Rscript scripts/assemble_statewide_model.R configs/statewide_assembly.yml
-Rscript scripts/build_region_model.R configs/greater_richmond.yml
+Rscript scripts/build_region_model.R configs/my_region.yml
 $env:VE_RSCRIPT = "$env:LOCALAPPDATA\Programs\R\R-4.4.2\bin\Rscript.exe"
 ```
 
 ```cmd
 scripts\check_visioneval_runtime.cmd
-scripts\run_region_model.cmd greater_richmond
+scripts\run_region_model.cmd my_region
 ```
 
 ## Manifest Rules
@@ -352,9 +359,9 @@ file and should not be listed as a copied manifest row.
 
 The regional build manifest must match the statewide input package. The
 included `metadata/input_manifest.csv` is a sample manifest used by the fixture
-workflow. For Virginia statewide model builds, use the manifest configured for
-that input package, such as `metadata/input_manifest_wppdc_full.csv`, or update
-the manifest only when using a different input package.
+workflow. For Virginia statewide model builds, use the full manifest supplied
+with that input package, or set `paths.manifest` in the region config to the
+appropriate manifest file.
 
 ## Generated Files and Local Configs
 
